@@ -8,6 +8,7 @@ param(
     [string]$ProviderEnvKey = $(if ($env:CODEX_PROVIDER_ENV_KEY) { $env:CODEX_PROVIDER_ENV_KEY } else { "CODEX_API_KEY" }),
     [string]$Model = $(if ($env:CODEX_MODEL) { $env:CODEX_MODEL } else { "gpt-5.5" }),
     [string]$ReasoningEffort = $(if ($env:CODEX_REASONING_EFFORT) { $env:CODEX_REASONING_EFFORT } else { "high" }),
+    [string]$NpmRegistry = $(if ($env:CODEX_NPM_REGISTRY) { $env:CODEX_NPM_REGISTRY } else { "https://registry.npmmirror.com" }),
     [string]$BootstrapRepo = $(if ($env:BOOTSTRAP_REPO) { $env:BOOTSTRAP_REPO } else { "HY-LiYihan/codex-bootstrap" }),
     [string]$BootstrapRef = $(if ($env:BOOTSTRAP_REF) { $env:BOOTSTRAP_REF } else { "main" }),
     [string]$Profile = $(if ($env:CODEX_PROFILE) { $env:CODEX_PROFILE } else { "default" }),
@@ -58,6 +59,7 @@ Environment:
   CODEX_PROVIDER_ENV_KEY              Provider env key (default: CODEX_API_KEY)
   CODEX_MODEL                         Default model (default: gpt-5.5)
   CODEX_REASONING_EFFORT              Reasoning effort (default: high)
+  CODEX_NPM_REGISTRY                  npm fallback registry (default: https://registry.npmmirror.com)
   BOOTSTRAP_REF                       Git branch/tag for templates (default: main)
 "@
 }
@@ -163,7 +165,19 @@ function Install-Codex {
     if (-not (Test-CommandExists "npm")) {
         Fail "npm is required when Bun is unavailable. Install Node.js or rerun without -NoBun."
     }
-    Invoke-Run "npm install -g @openai/codex" { & npm install -g '@openai/codex' }
+    if ($DryRun) {
+        Invoke-Run "npm install -g @openai/codex" { & npm install -g '@openai/codex' }
+        return
+    }
+
+    try {
+        & npm install -g '@openai/codex'
+        if ($LASTEXITCODE -eq 0) { return }
+        throw "npm install exited with $LASTEXITCODE"
+    } catch {
+        Write-Warn "npm default registry install failed; retrying with $NpmRegistry"
+        & npm install -g '@openai/codex' "--registry=$NpmRegistry"
+    }
 }
 
 function Backup-File {
@@ -273,6 +287,7 @@ function Main {
     Write-Info "Provider env key: $ProviderEnvKey"
     Write-Info "Model: $Model"
     Write-Info "Reasoning effort: $ReasoningEffort"
+    Write-Info "npm fallback registry: $NpmRegistry"
     Write-Info "Base URL: $BaseUrl"
     if ($Token) { Write-Info "API key: $(Mask-Secret $Token)" }
 

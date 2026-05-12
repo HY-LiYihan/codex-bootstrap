@@ -109,6 +109,15 @@ irm https://raw.githubusercontent.com/HY-LiYihan/codex-bootstrap/main/install.ps
 --no-bun             Do not install Bun automatically
 ```
 
+## Multi-System Notes
+
+- macOS and Linux use `install.sh`; Windows uses `install.ps1`.
+- macOS/Linux detect OS, CPU architecture, shell type, and the startup file to update.
+- Bash shells use `.bash_profile` on macOS and `.bashrc` on Linux; zsh uses `.zshrc`.
+- If Bun is missing, installers try to install Bun automatically unless `--no-bun` or `-NoBun` is used.
+- If npm installation fails with the default registry, both scripts retry with `CODEX_NPM_REGISTRY`, defaulting to `https://registry.npmmirror.com`.
+- Windows writes `windows_wsl_setup_acknowledged = true` into `config.toml`.
+
 ## Release Flow
 
 Use `main` as the development entrypoint and tags as stable entrypoints.

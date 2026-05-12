@@ -18,6 +18,7 @@ PROVIDER_ENV_KEY="${CODEX_PROVIDER_ENV_KEY:-CODEX_API_KEY}"
 MODEL="${CODEX_MODEL:-gpt-5.5}"
 REASONING_EFFORT="${CODEX_REASONING_EFFORT:-high}"
 PROJECT_DIR="${CODEX_PROJECT_DIR:-$PWD}"
+NPM_REGISTRY="${CODEX_NPM_REGISTRY:-https://registry.npmmirror.com}"
 LOCAL_SOURCE=""
 DRY_RUN=0
 YES=0
@@ -25,6 +26,11 @@ FORCE=0
 SKIP_CODEX_INSTALL=0
 SKIP_SHELL_RC=0
 INSTALL_BUN=1
+OS_ID=""
+OS_NAME=""
+ARCH_NAME=""
+SHELL_NAME=""
+SHELL_RC=""
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -77,6 +83,7 @@ Environment:
   CODEX_PROVIDER_ENV_KEY              Provider env key (default: ${PROVIDER_ENV_KEY})
   CODEX_MODEL                         Default model (default: ${MODEL})
   CODEX_REASONING_EFFORT              Reasoning effort (default: ${REASONING_EFFORT})
+  CODEX_NPM_REGISTRY                  npm fallback registry (default: ${NPM_REGISTRY})
   CODEX_PROFILE                       Profile name (default: default)
 USAGE
 }
@@ -102,6 +109,46 @@ done
 command_exists() { command -v "$1" >/dev/null 2>&1; }
 validate_env_key() {
   [[ "$PROVIDER_ENV_KEY" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] || fail "Invalid CODEX_PROVIDER_ENV_KEY: $PROVIDER_ENV_KEY"
+}
+
+detect_platform() {
+  local kernel
+  kernel="$(uname -s 2>/dev/null || printf unknown)"
+  ARCH_NAME="$(uname -m 2>/dev/null || printf unknown)"
+
+  case "$kernel" in
+    Darwin)
+      OS_ID="macos"
+      OS_NAME="macOS"
+      ;;
+    Linux)
+      OS_ID="linux"
+      OS_NAME="Linux"
+      if [[ -f /etc/os-release ]]; then
+        # shellcheck disable=SC1091
+        . /etc/os-release
+        OS_NAME="${PRETTY_NAME:-${NAME:-Linux}}"
+      fi
+      ;;
+    *)
+      fail "Unsupported OS for install.sh: $kernel. Use install.ps1 on Windows."
+      ;;
+  esac
+
+  if [[ "${SHELL:-}" == *zsh* ]]; then
+    SHELL_NAME="zsh"
+    SHELL_RC="$HOME/.zshrc"
+  elif [[ "${SHELL:-}" == *bash* ]]; then
+    SHELL_NAME="bash"
+    if [[ "$OS_ID" == "macos" ]]; then
+      SHELL_RC="$HOME/.bash_profile"
+    else
+      SHELL_RC="$HOME/.bashrc"
+    fi
+  else
+    SHELL_NAME="${SHELL##*/}"
+    SHELL_RC="$HOME/.profile"
+  fi
 }
 
 run() {
@@ -132,7 +179,9 @@ confirm() {
 }
 
 detect_shell_rc() {
-  if [[ "${SHELL:-}" == *zsh* ]]; then
+  if [[ -n "$SHELL_RC" ]]; then
+    printf "%s" "$SHELL_RC"
+  elif [[ "${SHELL:-}" == *zsh* ]]; then
     printf "%s/.zshrc" "$HOME"
   else
     printf "%s/.bashrc" "$HOME"
@@ -189,9 +238,18 @@ ensure_bun() {
     log_ok "Bun found: $(bun --version)"
     return 0
   fi
-  confirm "Bun is missing. Install Bun to manage Codex globally?" || return 1
-  log_step "Bun" "Installing Bun runtime"
-  run bash -c 'curl -fsSL https://bun.sh/install | bash'
+
+  log_info "Bun is missing; installing Bun runtime"
+  if [[ "$DRY_RUN" == "1" ]]; then
+    run bash -c 'curl -fsSL https://bun.sh/install | bash'
+  else
+    if curl -fsSL --connect-timeout 15 https://bun.sh/install | bash; then
+      log_ok "Bun installed with official installer"
+    else
+      log_warn "Official Bun installer failed; npm fallback may still work"
+    fi
+  fi
+
   export BUN_INSTALL="$HOME/.bun"
   export PATH="$BUN_INSTALL/bin:$PATH"
   command_exists bun || return 1
@@ -215,7 +273,11 @@ install_codex() {
   fi
 
   command_exists npm || fail "npm is required when Bun is unavailable. Install Node.js or rerun without --no-bun."
-  run npm install -g @openai/codex
+  if run npm install -g @openai/codex; then
+    return 0
+  fi
+  log_warn "npm default registry install failed; retrying with $NPM_REGISTRY"
+  run npm install -g @openai/codex --registry="$NPM_REGISTRY"
 }
 
 backup_file() {
@@ -331,10 +393,15 @@ setup_shell_rc() {
 main() {
   print_banner
   validate_env_key
+  detect_platform
   log_step "1/7" "Inspect system and bootstrap settings"
+  log_info "OS: $OS_NAME ($OS_ID/$ARCH_NAME)"
+  log_info "Shell: ${SHELL_NAME:-unknown}, rc: $(detect_shell_rc)"
   log_info "Profile: $BOOTSTRAP_PROFILE"
   log_info "Provider: $PROVIDER_ID"
   log_info "Provider env key: $PROVIDER_ENV_KEY"
+  log_info "Model: $MODEL"
+  log_info "Reasoning effort: $REASONING_EFFORT"
   log_info "Base URL: $API_BASE_URL"
   [[ -n "$API_KEY" ]] && log_info "API key: $(mask_secret "$API_KEY")"
 
