@@ -16,59 +16,48 @@ Aliases:
 
 ## Quick Start
 
-Codex on macOS/Linux:
+The main contract is deliberately simple:
+
+- `AGENT`: `codex`, `claudecode`, or `openclaw`
+- `AGENT_TOKEN`: the API token for that agent/gateway
+- `AGENT_BASE_URL`: the API gateway/base URL for that agent
+- `AGENT_MODEL`: optional model override for agents that use a model setting
+
+macOS/Linux:
 
 ```bash
-CODEX_TOKEN="YOUR_TOKEN" \
-CODEX_API_URL="https://codex1.sssaicode.com/api/v1" \
-AGENT=codex \
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/install.sh)"
+AGENT=codex AGENT_TOKEN="YOUR_TOKEN" AGENT_BASE_URL="https://codex1.sssaicode.com/api/v1" bash -c "$(curl -fsSL https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/install.sh)"
 ```
 
-Codex on Windows PowerShell:
+```bash
+AGENT=claudecode AGENT_TOKEN="YOUR_TOKEN" AGENT_BASE_URL="https://node-hk.sssaicode.com/api" bash -c "$(curl -fsSL https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/install.sh)"
+```
+
+```bash
+AGENT=openclaw AGENT_TOKEN="YOUR_TOKEN" AGENT_BASE_URL="https://node-hk.sssaicode.com/api" AGENT_MODEL="anthropic/claude-opus-4-7" bash -c "$(curl -fsSL https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/install.sh)"
+```
+
+Windows PowerShell:
 
 ```powershell
 $env:AGENT='codex'
-$env:CODEX_TOKEN='YOUR_TOKEN'
-$env:CODEX_API_URL='https://codex1.sssaicode.com/api/v1'
+$env:AGENT_TOKEN='YOUR_TOKEN'
+$env:AGENT_BASE_URL='https://codex1.sssaicode.com/api/v1'
 irm https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/install.ps1 | iex
 ```
-
-Claude Code on macOS/Linux:
-
-```bash
-CLAUDE_TOKEN="YOUR_TOKEN" \
-CLAUDE_API_URL="https://node-hk.sssaicode.com/api" \
-AGENT=claudecode \
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/install.sh)"
-```
-
-Claude Code on Windows PowerShell:
 
 ```powershell
 $env:AGENT='claudecode'
-$env:CLAUDE_CLIENT_TOKEN='YOUR_TOKEN'
-$env:CLAUDE_API_URL='https://node-hk.sssaicode.com/api'
+$env:AGENT_TOKEN='YOUR_TOKEN'
+$env:AGENT_BASE_URL='https://node-hk.sssaicode.com/api'
 irm https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/install.ps1 | iex
 ```
 
-OpenClaw on macOS/Linux:
-
-```bash
-OPENCLAW_TOKEN="YOUR_TOKEN" \
-OPENCLAW_BASE_URL="https://node-hk.sssaicode.com/api" \
-OPENCLAW_MODEL="anthropic/claude-opus-4-7" \
-AGENT=openclaw \
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/install.sh)"
-```
-
-OpenClaw on Windows PowerShell:
-
 ```powershell
 $env:AGENT='openclaw'
-$env:OPENCLAW_TOKEN='YOUR_TOKEN'
-$env:OPENCLAW_BASE_URL='https://node-hk.sssaicode.com/api'
-$env:OPENCLAW_MODEL='anthropic/claude-opus-4-7'
+$env:AGENT_TOKEN='YOUR_TOKEN'
+$env:AGENT_BASE_URL='https://node-hk.sssaicode.com/api'
+$env:AGENT_MODEL='anthropic/claude-opus-4-7'
 irm https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/install.ps1 | iex
 ```
 
@@ -105,9 +94,9 @@ OpenClaw:
 macOS/Linux:
 
 ```bash
-AGENT=codex AGENT_BOOTSTRAP_LOCAL_SOURCE=. CODEX_TOKEN=test-token ./install.sh --dry-run --skip-codex-install --skip-shell-rc --yes
-AGENT=claudecode AGENT_BOOTSTRAP_LOCAL_SOURCE=. CLAUDE_TOKEN=test-token ./install.sh --dry-run --skip-claude-install
-AGENT=openclaw AGENT_BOOTSTRAP_LOCAL_SOURCE=. OPENCLAW_TOKEN=test-token ./install.sh --dry-run
+AGENT=codex AGENT_TOKEN=test-token AGENT_BASE_URL=https://codex1.sssaicode.com/api/v1 AGENT_BOOTSTRAP_LOCAL_SOURCE=. ./install.sh --dry-run --skip-codex-install --skip-shell-rc --yes
+AGENT=claudecode AGENT_TOKEN=test-token AGENT_BASE_URL=https://node-hk.sssaicode.com/api AGENT_BOOTSTRAP_LOCAL_SOURCE=. ./install.sh --dry-run --skip-claude-install
+AGENT=openclaw AGENT_TOKEN=test-token AGENT_BASE_URL=https://node-hk.sssaicode.com/api AGENT_BOOTSTRAP_LOCAL_SOURCE=. ./install.sh --dry-run
 ```
 
 Windows PowerShell:

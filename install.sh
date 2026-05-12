@@ -27,15 +27,20 @@ usage() {
 Agent Bootstrap
 
 Usage:
-  AGENT=codex bash -c "\$(curl -fsSL https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/install.sh)"
-  AGENT=claudecode bash -c "\$(curl -fsSL https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/install.sh)"
-  AGENT=openclaw bash -c "\$(curl -fsSL https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/install.sh)"
+  AGENT=codex AGENT_TOKEN=... AGENT_BASE_URL=... bash -c "\$(curl -fsSL https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/install.sh)"
+  AGENT=claudecode AGENT_TOKEN=... AGENT_BASE_URL=... bash -c "\$(curl -fsSL https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/install.sh)"
+  AGENT=openclaw AGENT_TOKEN=... AGENT_BASE_URL=... bash -c "\$(curl -fsSL https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/install.sh)"
 
 Aliases:
   codex, claudecode, claude, openclaw
 
 You can also pass the agent as the first argument:
   bash -c "\$(curl -fsSL .../install.sh)" -- codex
+
+Unified env:
+  AGENT_TOKEN      Shared API token for the selected agent
+  AGENT_BASE_URL   Shared gateway/base URL for the selected agent
+  AGENT_MODEL      Optional model value for agents that support it
 USAGE
 }
 
@@ -45,6 +50,28 @@ normalize_agent() {
     claude|claudecode|claude-code) printf "claudecode" ;;
     openclaw|claw) printf "openclaw" ;;
     *) return 1 ;;
+  esac
+}
+
+prepare_agent_env() {
+  local normalized="$1"
+
+  case "$normalized" in
+    codex)
+      if [[ -n "${AGENT_TOKEN:-}" && -z "${CODEX_TOKEN:-}" ]]; then export CODEX_TOKEN="$AGENT_TOKEN"; fi
+      if [[ -n "${AGENT_BASE_URL:-}" && -z "${CODEX_API_URL:-}" ]]; then export CODEX_API_URL="$AGENT_BASE_URL"; fi
+      if [[ -n "${AGENT_MODEL:-}" && -z "${CODEX_MODEL:-}" ]]; then export CODEX_MODEL="$AGENT_MODEL"; fi
+      ;;
+    claudecode)
+      if [[ -n "${AGENT_TOKEN:-}" && -z "${CLAUDE_TOKEN:-}" ]]; then export CLAUDE_TOKEN="$AGENT_TOKEN"; fi
+      if [[ -n "${AGENT_TOKEN:-}" && -z "${CLAUDE_CLIENT_TOKEN:-}" ]]; then export CLAUDE_CLIENT_TOKEN="$AGENT_TOKEN"; fi
+      if [[ -n "${AGENT_BASE_URL:-}" && -z "${CLAUDE_API_URL:-}" ]]; then export CLAUDE_API_URL="$AGENT_BASE_URL"; fi
+      ;;
+    openclaw)
+      if [[ -n "${AGENT_TOKEN:-}" && -z "${OPENCLAW_TOKEN:-}" ]]; then export OPENCLAW_TOKEN="$AGENT_TOKEN"; fi
+      if [[ -n "${AGENT_BASE_URL:-}" && -z "${OPENCLAW_BASE_URL:-}" ]]; then export OPENCLAW_BASE_URL="$AGENT_BASE_URL"; fi
+      if [[ -n "${AGENT_MODEL:-}" && -z "${OPENCLAW_MODEL:-}" ]]; then export OPENCLAW_MODEL="$AGENT_MODEL"; fi
+      ;;
   esac
 }
 
@@ -117,6 +144,7 @@ main() {
 
   local normalized source_dir installer
   normalized="$(normalize_agent "$AGENT")" || fail "Unknown agent: $AGENT"
+  prepare_agent_env "$normalized"
   source_dir="$(download_source)"
   installer="$source_dir/agents/$normalized/install.sh"
 

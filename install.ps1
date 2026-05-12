@@ -18,12 +18,17 @@ function Show-Help {
 Agent Bootstrap
 
 Usage:
-  `$env:AGENT='codex'; irm https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/install.ps1 | iex
-  `$env:AGENT='claudecode'; irm https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/install.ps1 | iex
-  `$env:AGENT='openclaw'; irm https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/install.ps1 | iex
+  `$env:AGENT='codex'; `$env:AGENT_TOKEN='...'; `$env:AGENT_BASE_URL='...'; irm https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/install.ps1 | iex
+  `$env:AGENT='claudecode'; `$env:AGENT_TOKEN='...'; `$env:AGENT_BASE_URL='...'; irm https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/install.ps1 | iex
+  `$env:AGENT='openclaw'; `$env:AGENT_TOKEN='...'; `$env:AGENT_BASE_URL='...'; irm https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/install.ps1 | iex
 
 Aliases:
   codex, claudecode, claude, openclaw
+
+Unified env:
+  AGENT_TOKEN      Shared API token for the selected agent
+  AGENT_BASE_URL   Shared gateway/base URL for the selected agent
+  AGENT_MODEL      Optional model value for agents that support it
 "@
 }
 
@@ -38,6 +43,27 @@ function Normalize-Agent {
         "openclaw" { return "openclaw" }
         "claw" { return "openclaw" }
         default { Fail "Unknown agent: $Name" }
+    }
+}
+
+function Set-AgentEnv {
+    param([string]$Normalized)
+    switch ($Normalized) {
+        "codex" {
+            if ($env:AGENT_TOKEN -and -not $env:CODEX_TOKEN) { $env:CODEX_TOKEN = $env:AGENT_TOKEN }
+            if ($env:AGENT_BASE_URL -and -not $env:CODEX_API_URL) { $env:CODEX_API_URL = $env:AGENT_BASE_URL }
+            if ($env:AGENT_MODEL -and -not $env:CODEX_MODEL) { $env:CODEX_MODEL = $env:AGENT_MODEL }
+        }
+        "claudecode" {
+            if ($env:AGENT_TOKEN -and -not $env:CLAUDE_TOKEN) { $env:CLAUDE_TOKEN = $env:AGENT_TOKEN }
+            if ($env:AGENT_TOKEN -and -not $env:CLAUDE_CLIENT_TOKEN) { $env:CLAUDE_CLIENT_TOKEN = $env:AGENT_TOKEN }
+            if ($env:AGENT_BASE_URL -and -not $env:CLAUDE_API_URL) { $env:CLAUDE_API_URL = $env:AGENT_BASE_URL }
+        }
+        "openclaw" {
+            if ($env:AGENT_TOKEN -and -not $env:OPENCLAW_TOKEN) { $env:OPENCLAW_TOKEN = $env:AGENT_TOKEN }
+            if ($env:AGENT_BASE_URL -and -not $env:OPENCLAW_BASE_URL) { $env:OPENCLAW_BASE_URL = $env:AGENT_BASE_URL }
+            if ($env:AGENT_MODEL -and -not $env:OPENCLAW_MODEL) { $env:OPENCLAW_MODEL = $env:AGENT_MODEL }
+        }
     }
 }
 
@@ -73,6 +99,7 @@ function Main {
     }
 
     $normalized = Normalize-Agent $Agent
+    Set-AgentEnv $normalized
     $sourceDir = Get-SourceDir
     $installer = Join-Path $sourceDir "agents\$normalized\install.ps1"
     if (-not (Test-Path $installer)) { Fail "Installer not found: $installer" }
