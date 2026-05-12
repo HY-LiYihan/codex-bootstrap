@@ -1,0 +1,10 @@
+# Local secrets and scratch output
+.env
+*.env.local
+private.env
+.codex-private.env
+.DS_Store
+
+# Test/build scratch
+tmp/
+.cache/

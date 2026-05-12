@@ -1,0 +1,7 @@
+# Codex Bootstrap default rules
+
+- Prefer the official `openai` provider with `openai_base_url` instead of custom providers when plugin compatibility matters.
+- Never print full API keys, tokens, session cookies, or private env file contents.
+- Use subagents for long-running exploration, repository scans, and verification when available.
+- Prefer small, reversible changes with backups before modifying user-level Codex configuration.
+- Keep project-specific instructions in AGENTS.md and global behavioral defaults in ~/.codex/rules/default.rules.
