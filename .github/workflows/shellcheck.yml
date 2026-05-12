@@ -1,4 +1,4 @@
-name: shellcheck
+name: script-checks
 
 on:
   pull_request:
@@ -6,11 +6,31 @@ on:
     branches: [main]
 
 jobs:
-  shellcheck:
+  bash:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Shell syntax check
+      - name: Bash syntax check
         run: bash -n install.sh
-      - name: Dry run
+      - name: Bash dry run
         run: CODEX_TOKEN=test-token ./install.sh --local . --dry-run --skip-codex-install --skip-shell-rc --yes
+
+  windows-powershell:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: PowerShell syntax check
+        shell: pwsh
+        run: |
+          $tokens = $null
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path .\install.ps1).Path, [ref]$tokens, [ref]$errors) | Out-Null
+          if ($errors.Count -gt 0) {
+            $errors | Format-List | Out-String | Write-Host
+            exit 1
+          }
+      - name: PowerShell dry run
+        shell: pwsh
+        run: |
+          $env:CODEX_TOKEN = 'test-token'
+          .\install.ps1 -LocalSource . -DryRun -SkipCodexInstall -SkipProfileUpdate

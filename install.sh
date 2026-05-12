@@ -290,14 +290,14 @@ install_rules_and_templates() {
   local agents_src="$source_dir/templates/AGENTS.md"
 
   if [[ -f "$rules_src" ]]; then
-    log_step "6/7" "Install default Codex rules"
+    log_step "6/7" "Install rules and project instructions"
     run mkdir -p "$CODEX_HOME/rules"
     backup_file "$CODEX_HOME/rules/default.rules"
     run cp "$rules_src" "$CODEX_HOME/rules/default.rules"
   fi
 
   if [[ -f "$agents_src" ]]; then
-    log_step "7/7" "Install project AGENTS.md"
+    log_info "Installing project AGENTS.md into $PROJECT_DIR"
     run mkdir -p "$PROJECT_DIR"
     if [[ -f "$PROJECT_DIR/AGENTS.md" && "$FORCE" != "1" ]]; then
       log_warn "AGENTS.md already exists; keeping it. Use --force to overwrite."
@@ -313,7 +313,7 @@ setup_shell_rc() {
   local shell_rc
   shell_rc="$(detect_shell_rc)"
   local source_line="[ -f \"$PRIVATE_ENV_FILE\" ] && source \"$PRIVATE_ENV_FILE\""
-  log_step "Shell" "Ensure shell loads private env"
+  log_step "7/7" "Ensure shell loads private env"
   if [[ "$DRY_RUN" == "1" ]]; then
     printf "DRY-RUN: ensure source line exists in %s\n" "$shell_rc"
     return 0
@@ -331,7 +331,7 @@ setup_shell_rc() {
 main() {
   print_banner
   validate_env_key
-  log_step "1/7" "Inspect bootstrap settings"
+  log_step "1/7" "Inspect system and bootstrap settings"
   log_info "Profile: $BOOTSTRAP_PROFILE"
   log_info "Provider: $PROVIDER_ID"
   log_info "Provider env key: $PROVIDER_ENV_KEY"
