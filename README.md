@@ -21,7 +21,7 @@ macOS:
 ```bash
 CODEX_TOKEN="YOUR_TOKEN" \
 CODEX_API_URL="https://codex1.sssaicode.com/api/v1" \
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/HY-LiYihan/codex-bootstrap/main/install.sh)"
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/HY-LiYihan/codex-bootstrap/stable/install.sh)"
 ```
 
 Linux:
@@ -29,7 +29,7 @@ Linux:
 ```bash
 CODEX_TOKEN="YOUR_TOKEN" \
 CODEX_API_URL="https://codex1.sssaicode.com/api/v1" \
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/HY-LiYihan/codex-bootstrap/main/install.sh)"
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/HY-LiYihan/codex-bootstrap/stable/install.sh)"
 ```
 
 Windows PowerShell:
@@ -37,7 +37,7 @@ Windows PowerShell:
 ```powershell
 $env:CODEX_TOKEN='YOUR_TOKEN'
 $env:CODEX_API_URL='https://codex1.sssaicode.com/api/v1'
-irm https://raw.githubusercontent.com/HY-LiYihan/codex-bootstrap/main/install.ps1 | iex
+irm https://raw.githubusercontent.com/HY-LiYihan/codex-bootstrap/stable/install.ps1 | iex
 ```
 
 Local dry run on macOS/Linux:
@@ -80,7 +80,7 @@ CODEX_PROVIDER_ID="sss" \
 CODEX_PROVIDER_ENV_KEY="SSS_API_KEY" \
 CODEX_TOKEN="YOUR_TOKEN" \
 CODEX_API_URL="https://codex1.sssaicode.com/api/v1" \
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/HY-LiYihan/codex-bootstrap/main/install.sh)"
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/HY-LiYihan/codex-bootstrap/stable/install.sh)"
 ```
 
 Windows:
@@ -90,7 +90,7 @@ $env:CODEX_PROVIDER_ID='sss'
 $env:CODEX_PROVIDER_ENV_KEY='SSS_API_KEY'
 $env:CODEX_TOKEN='YOUR_TOKEN'
 $env:CODEX_API_URL='https://codex1.sssaicode.com/api/v1'
-irm https://raw.githubusercontent.com/HY-LiYihan/codex-bootstrap/main/install.ps1 | iex
+irm https://raw.githubusercontent.com/HY-LiYihan/codex-bootstrap/stable/install.ps1 | iex
 ```
 
 ## Bash Options
@@ -120,17 +120,22 @@ irm https://raw.githubusercontent.com/HY-LiYihan/codex-bootstrap/main/install.ps
 
 ## Release Flow
 
-Use `main` as the development entrypoint and tags as stable entrypoints.
+Use semantic version tags for immutable releases, and move `stable`/`latest` to the recommended release so install commands do not need to change.
+
+- `stable`: recommended default install target.
+- `latest`: alias for the newest published install target.
+- `vX.Y`: immutable version tags for pinning and rollback.
 
 ```bash
-git tag v2
-git push origin main v2
+git tag -f stable
+git tag -f latest
+git push -f origin stable latest
 ```
 
 Then use:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/HY-LiYihan/codex-bootstrap/v2/install.sh
+curl -fsSL https://raw.githubusercontent.com/HY-LiYihan/codex-bootstrap/stable/install.sh
 ```
 
 ## Security Notes
