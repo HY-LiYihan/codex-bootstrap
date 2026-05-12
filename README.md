@@ -1,61 +1,80 @@
-# Codex Bootstrap
+# Agent Bootstrap
 
-Personal Codex bootstrapper for a simple gateway-oriented setup. It writes a `custom` model provider into Codex config, stores the API key locally, and supports macOS, Linux, and Windows entrypoints.
+One-click bootstrapper for multiple AI coding agents. It currently supports Codex, Claude Code, and OpenClaw, with shared `stable` / `latest` install tags and cross-platform entrypoints.
 
-## Seven-Step Flow
+## Supported Agents
 
-Both `install.sh` and `install.ps1` follow the same 7-step flow:
+- `codex`: configures OpenAI Codex CLI with a custom gateway provider.
+- `claudecode`: installs/configures Claude Code with `ANTHROPIC_AUTH_TOKEN` and `ANTHROPIC_BASE_URL`.
+- `openclaw`: writes OpenClaw model and auth JSON config.
 
-1. Inspect system and bootstrap settings: print OS/shell or PowerShell context, provider, model, reasoning effort, base URL, and masked token status.
-2. Load profile and template assets: load `profiles/<name>.env` and templates from the GitHub repo, tag, branch, or local checkout.
-3. Install or verify Codex CLI: reuse an existing `codex` binary unless `--force`/`-Force` is used; otherwise install `@openai/codex` with Bun first and npm fallback.
-4. Write private API key: write the token into a local private env file and set the provider env key for the current user/session.
-5. Write Codex custom provider config: generate `config.toml` with `model_provider = "custom"`, `gpt-5.5`, and `high` reasoning by default.
-6. Install rules and project instructions: install global `default.rules` and a project `AGENTS.md` template when available.
-7. Ensure shell loads private env: update shell startup on macOS/Linux or PowerShell profile/user environment on Windows.
+Aliases:
+
+- `codex`, `openai-codex`
+- `claudecode`, `claude`, `claude-code`
+- `openclaw`, `claw`
 
 ## Quick Start
 
-macOS:
+Codex on macOS/Linux:
 
 ```bash
 CODEX_TOKEN="YOUR_TOKEN" \
 CODEX_API_URL="https://codex1.sssaicode.com/api/v1" \
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/HY-LiYihan/codex-bootstrap/stable/install.sh)"
+AGENT=codex \
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/install.sh)"
 ```
 
-Linux:
-
-```bash
-CODEX_TOKEN="YOUR_TOKEN" \
-CODEX_API_URL="https://codex1.sssaicode.com/api/v1" \
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/HY-LiYihan/codex-bootstrap/stable/install.sh)"
-```
-
-Windows PowerShell:
+Codex on Windows PowerShell:
 
 ```powershell
+$env:AGENT='codex'
 $env:CODEX_TOKEN='YOUR_TOKEN'
 $env:CODEX_API_URL='https://codex1.sssaicode.com/api/v1'
-irm https://raw.githubusercontent.com/HY-LiYihan/codex-bootstrap/stable/install.ps1 | iex
+irm https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/install.ps1 | iex
 ```
 
-Local dry run on macOS/Linux:
+Claude Code on macOS/Linux:
 
 ```bash
-CODEX_TOKEN="test-token" ./install.sh --local . --dry-run --skip-codex-install --skip-shell-rc --yes
+CLAUDE_TOKEN="YOUR_TOKEN" \
+CLAUDE_API_URL="https://node-hk.sssaicode.com/api" \
+AGENT=claudecode \
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/install.sh)"
 ```
 
-Local dry run on Windows:
+Claude Code on Windows PowerShell:
 
 ```powershell
-$env:CODEX_TOKEN='test-token'
-.\install.ps1 -LocalSource . -DryRun -SkipCodexInstall -SkipProfileUpdate
+$env:AGENT='claudecode'
+$env:CLAUDE_CLIENT_TOKEN='YOUR_TOKEN'
+$env:CLAUDE_API_URL='https://node-hk.sssaicode.com/api'
+irm https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/install.ps1 | iex
 ```
 
-## Generated Config
+OpenClaw on macOS/Linux:
 
-Default generated TOML:
+```bash
+OPENCLAW_TOKEN="YOUR_TOKEN" \
+OPENCLAW_BASE_URL="https://node-hk.sssaicode.com/api" \
+OPENCLAW_MODEL="anthropic/claude-opus-4-7" \
+AGENT=openclaw \
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/install.sh)"
+```
+
+OpenClaw on Windows PowerShell:
+
+```powershell
+$env:AGENT='openclaw'
+$env:OPENCLAW_TOKEN='YOUR_TOKEN'
+$env:OPENCLAW_BASE_URL='https://node-hk.sssaicode.com/api'
+$env:OPENCLAW_MODEL='anthropic/claude-opus-4-7'
+irm https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/install.ps1 | iex
+```
+
+## What Gets Written
+
+Codex:
 
 ```toml
 model = "gpt-5.5"
@@ -71,56 +90,37 @@ wire_api = "responses"
 env_key = "CODEX_API_KEY"
 ```
 
-Provider/env customization, for example to mimic an `sss` provider layout:
+Claude Code:
+
+- `~/.claude/settings.json` with `ANTHROPIC_AUTH_TOKEN`, `ANTHROPIC_BASE_URL`, timeout, and traffic-reduction env values.
+- `~/.claude.json` with onboarding marked complete.
+
+OpenClaw:
+
+- `~/.openclaw/openclaw.json`
+- `~/.openclaw/agents/main/agent/auth-profiles.json`
+
+## Local Dry Runs
 
 macOS/Linux:
 
 ```bash
-CODEX_PROVIDER_ID="sss" \
-CODEX_PROVIDER_ENV_KEY="SSS_API_KEY" \
-CODEX_TOKEN="YOUR_TOKEN" \
-CODEX_API_URL="https://codex1.sssaicode.com/api/v1" \
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/HY-LiYihan/codex-bootstrap/stable/install.sh)"
+AGENT=codex AGENT_BOOTSTRAP_LOCAL_SOURCE=. CODEX_TOKEN=test-token ./install.sh --dry-run --skip-codex-install --skip-shell-rc --yes
+AGENT=claudecode AGENT_BOOTSTRAP_LOCAL_SOURCE=. CLAUDE_TOKEN=test-token ./install.sh --dry-run --skip-claude-install
+AGENT=openclaw AGENT_BOOTSTRAP_LOCAL_SOURCE=. OPENCLAW_TOKEN=test-token ./install.sh --dry-run
 ```
 
-Windows:
+Windows PowerShell:
 
 ```powershell
-$env:CODEX_PROVIDER_ID='sss'
-$env:CODEX_PROVIDER_ENV_KEY='SSS_API_KEY'
-$env:CODEX_TOKEN='YOUR_TOKEN'
-$env:CODEX_API_URL='https://codex1.sssaicode.com/api/v1'
-irm https://raw.githubusercontent.com/HY-LiYihan/codex-bootstrap/stable/install.ps1 | iex
+$env:CODEX_TOKEN='test-token'; .\agents\codex\install.ps1 -LocalSource . -DryRun -SkipCodexInstall -SkipProfileUpdate
+$env:CLAUDE_CLIENT_TOKEN='test-token'; .\agents\claudecode\install.ps1 -DryRun -SkipInstall
+$env:OPENCLAW_TOKEN='test-token'; .\agents\openclaw\install.ps1 -DryRun
 ```
-
-## Bash Options
-
-```text
---profile NAME       Apply profiles/NAME.env
---project DIR        Write AGENTS.md into this project directory
---repo OWNER/REPO    Download assets from another GitHub repository
---ref REF            Download assets from a tag or branch
---local DIR          Use local assets instead of GitHub download
---dry-run            Print planned changes only
---yes                Skip prompts
---force              Reinstall/overwrite managed files
---skip-codex-install Do not install @openai/codex
---skip-shell-rc      Do not update .zshrc/.bashrc
---no-bun             Do not install Bun automatically
-```
-
-## Multi-System Notes
-
-- macOS and Linux use `install.sh`; Windows uses `install.ps1`.
-- macOS/Linux detect OS, CPU architecture, shell type, and the startup file to update.
-- Bash shells use `.bash_profile` on macOS and `.bashrc` on Linux; zsh uses `.zshrc`.
-- If Bun is missing, installers try to install Bun automatically unless `--no-bun` or `-NoBun` is used.
-- If npm installation fails with the default registry, both scripts retry with `CODEX_NPM_REGISTRY`, defaulting to `https://registry.npmmirror.com`.
-- Windows writes `windows_wsl_setup_acknowledged = true` into `config.toml`.
 
 ## Release Flow
 
-Use semantic version tags for immutable releases, and move `stable`/`latest` to the recommended release so install commands do not need to change.
+Use semantic version tags for immutable releases, and move `stable` / `latest` to the recommended release so install commands do not need to change.
 
 - `stable`: recommended default install target.
 - `latest`: alias for the newest published install target.
@@ -132,16 +132,8 @@ git tag -f latest
 git push -f origin stable latest
 ```
 
-Then use:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/HY-LiYihan/codex-bootstrap/stable/install.sh
-```
-
 ## Security Notes
 
 - Do not commit real tokens.
-- Prefer passing tokens through `CODEX_TOKEN` or `OPENAI_API_KEY` at install time.
-- macOS/Linux writes secrets to `~/.codex/private.env` and sources it from shell startup.
-- Windows writes secrets to `%USERPROFILE%\.codex\private.env`, updates the PowerShell profile, and sets the user environment variable.
+- Prefer passing tokens through environment variables at install time.
 - Rotate any token that has been pasted into chats, logs, shell history, or public files.
