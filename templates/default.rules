@@ -1,6 +1,6 @@
 # Codex Bootstrap default rules
 
-- Prefer the official `openai` provider with `openai_base_url` instead of custom providers when plugin compatibility matters.
+- Prefer the configured custom provider for gateway-backed Codex usage.
 - Never print full API keys, tokens, session cookies, or private env file contents.
 - Use subagents for long-running exploration, repository scans, and verification when available.
 - Prefer small, reversible changes with backups before modifying user-level Codex configuration.

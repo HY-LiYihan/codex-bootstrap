@@ -13,6 +13,8 @@ CONFIG_FILE="$CODEX_HOME/config.toml"
 PRIVATE_ENV_FILE="${CODEX_PRIVATE_ENV_FILE:-$CODEX_HOME/private.env}"
 API_BASE_URL="${CODEX_API_URL:-${OPENAI_BASE_URL:-https://api.openai.com/v1}}"
 API_KEY="${CODEX_TOKEN:-${OPENAI_API_KEY:-}}"
+PROVIDER_ID="${CODEX_PROVIDER_ID:-custom}"
+PROVIDER_ENV_KEY="${CODEX_PROVIDER_ENV_KEY:-CODEX_API_KEY}"
 MODEL="${CODEX_MODEL:-gpt-5.5}"
 REASONING_EFFORT="${CODEX_REASONING_EFFORT:-high}"
 PROJECT_DIR="${CODEX_PROJECT_DIR:-$PWD}"
@@ -29,9 +31,19 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 CYAN='\033[0;36m'
+MAGENTA='\033[0;35m'
+BOLD='\033[1m'
 NC='\033[0m'
 
-log_step() { printf "%b[%s]%b %s\n" "$CYAN" "$1" "$NC" "$2"; }
+print_banner() {
+  printf "\n"
+  printf "%b+--------------------------------------------------+%b\n" "$CYAN" "$NC"
+  printf "%b|%b %bCodex Bootstrap%b                                 %b|%b\n" "$CYAN" "$NC" "$BOLD" "$NC" "$CYAN" "$NC"
+  printf "%b|%b custom provider + colorful one-click setup     %b|%b\n" "$CYAN" "$NC" "$CYAN" "$NC"
+  printf "%b+--------------------------------------------------+%b\n\n" "$CYAN" "$NC"
+}
+
+log_step() { printf "\n%b[%s]%b %b%s%b\n" "$MAGENTA" "$1" "$NC" "$BOLD" "$2" "$NC"; }
 log_ok() { printf "%b[OK]%b %s\n" "$GREEN" "$NC" "$1"; }
 log_warn() { printf "%b[WARN]%b %s\n" "$YELLOW" "$NC" "$1"; }
 log_info() { printf "%b[INFO]%b %s\n" "$BLUE" "$NC" "$1"; }
@@ -59,11 +71,13 @@ Options:
   -h, --help           Show this help
 
 Environment:
-  CODEX_TOKEN or OPENAI_API_KEY    API key used by the official openai provider
-  CODEX_API_URL or OPENAI_BASE_URL API base URL, written as openai_base_url
-  CODEX_MODEL                     Default model (default: ${MODEL})
-  CODEX_REASONING_EFFORT          Reasoning effort (default: ${REASONING_EFFORT})
-  CODEX_PROFILE                   Profile name (default: default)
+  CODEX_TOKEN or OPENAI_API_KEY       API key written to the provider env key
+  CODEX_API_URL or OPENAI_BASE_URL    API base URL written to [model_providers.custom]
+  CODEX_PROVIDER_ID                   Provider id (default: ${PROVIDER_ID})
+  CODEX_PROVIDER_ENV_KEY              Provider env key (default: ${PROVIDER_ENV_KEY})
+  CODEX_MODEL                         Default model (default: ${MODEL})
+  CODEX_REASONING_EFFORT              Reasoning effort (default: ${REASONING_EFFORT})
+  CODEX_PROFILE                       Profile name (default: default)
 USAGE
 }
 
@@ -86,6 +100,10 @@ while [[ $# -gt 0 ]]; do
 done
 
 command_exists() { command -v "$1" >/dev/null 2>&1; }
+validate_env_key() {
+  [[ "$PROVIDER_ENV_KEY" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] || fail "Invalid CODEX_PROVIDER_ENV_KEY: $PROVIDER_ENV_KEY"
+}
+
 run() {
   if [[ "$DRY_RUN" == "1" ]]; then
     printf "DRY-RUN:"
@@ -210,15 +228,17 @@ backup_file() {
 
 write_private_env() {
   [[ -n "$API_KEY" ]] || fail "Missing CODEX_TOKEN or OPENAI_API_KEY"
-  log_step "Secrets" "Writing API key to $PRIVATE_ENV_FILE"
+  log_step "4/7" "Write private API key"
+  log_info "Secret file: $PRIVATE_ENV_FILE"
+  log_info "Provider env key: $PROVIDER_ENV_KEY"
   run mkdir -p "$(dirname "$PRIVATE_ENV_FILE")"
   if [[ "$DRY_RUN" == "1" ]]; then
-    printf "DRY-RUN: write OPENAI_API_KEY=%s to %s\n" "$(mask_secret "$API_KEY")" "$PRIVATE_ENV_FILE"
+    printf "DRY-RUN: write %s=%s to %s\n" "$PROVIDER_ENV_KEY" "$(mask_secret "$API_KEY")" "$PRIVATE_ENV_FILE"
   else
     umask 077
     cat > "$PRIVATE_ENV_FILE" <<ENVEOF
 # Managed by codex-bootstrap. Do not commit this file.
-export OPENAI_API_KEY="$API_KEY"
+export $PROVIDER_ENV_KEY="$API_KEY"
 ENVEOF
     chmod 600 "$PRIVATE_ENV_FILE"
   fi
@@ -226,43 +246,35 @@ ENVEOF
 }
 
 write_config() {
-  log_step "Config" "Writing Codex config with official openai provider"
+  log_step "5/7" "Write Codex custom provider config"
   run mkdir -p "$CODEX_HOME"
   backup_file "$CONFIG_FILE"
-  local model_escaped effort_escaped url_escaped project_escaped
+  local provider_escaped env_key_escaped model_escaped effort_escaped url_escaped project_escaped
+  provider_escaped="$(toml_escape "$PROVIDER_ID")"
+  env_key_escaped="$(toml_escape "$PROVIDER_ENV_KEY")"
   model_escaped="$(toml_escape "$MODEL")"
   effort_escaped="$(toml_escape "$REASONING_EFFORT")"
   url_escaped="$(toml_escape "$API_BASE_URL")"
   project_escaped="$(toml_escape "$PROJECT_DIR")"
   if [[ "$DRY_RUN" == "1" ]]; then
-    printf "DRY-RUN: write %s with model_provider=openai openai_base_url=%s\n" "$CONFIG_FILE" "$API_BASE_URL"
+    printf "DRY-RUN: write %s with model_provider=%s base_url=%s env_key=%s\n" "$CONFIG_FILE" "$PROVIDER_ID" "$API_BASE_URL" "$PROVIDER_ENV_KEY"
     return 0
   fi
 
   cat > "$CONFIG_FILE" <<TOML
 # Managed by codex-bootstrap.
-# Keep provider as official "openai" so plugins, apps, MCP, and subagents stay maximally compatible.
+# This intentionally uses a custom provider, matching the simple gateway-oriented Codex setup.
 model = "$model_escaped"
 model_reasoning_effort = "$effort_escaped"
 preferred_auth_method = "apikey"
 disable_response_storage = true
-model_provider = "openai"
-openai_base_url = "$url_escaped"
+model_provider = "$provider_escaped"
 
-[features]
-apps = true
-browser_use = true
-computer_use = true
-hooks = true
-image_generation = true
-in_app_browser = true
-multi_agent = true
-plugins = true
-shell_snapshot = true
-tool_search = true
-tool_suggest = true
-unified_exec = true
-workspace_dependencies = true
+[model_providers."$provider_escaped"]
+name = "$provider_escaped"
+base_url = "$url_escaped"
+wire_api = "responses"
+env_key = "$env_key_escaped"
 
 [plugins."browser-use@openai-bundled"]
 enabled = true
@@ -278,14 +290,14 @@ install_rules_and_templates() {
   local agents_src="$source_dir/templates/AGENTS.md"
 
   if [[ -f "$rules_src" ]]; then
-    log_step "Rules" "Installing default Codex rules"
+    log_step "6/7" "Install default Codex rules"
     run mkdir -p "$CODEX_HOME/rules"
     backup_file "$CODEX_HOME/rules/default.rules"
     run cp "$rules_src" "$CODEX_HOME/rules/default.rules"
   fi
 
   if [[ -f "$agents_src" ]]; then
-    log_step "Project" "Installing AGENTS.md into $PROJECT_DIR"
+    log_step "7/7" "Install project AGENTS.md"
     run mkdir -p "$PROJECT_DIR"
     if [[ -f "$PROJECT_DIR/AGENTS.md" && "$FORCE" != "1" ]]; then
       log_warn "AGENTS.md already exists; keeping it. Use --force to overwrite."
@@ -301,7 +313,7 @@ setup_shell_rc() {
   local shell_rc
   shell_rc="$(detect_shell_rc)"
   local source_line="[ -f \"$PRIVATE_ENV_FILE\" ] && source \"$PRIVATE_ENV_FILE\""
-  log_step "Shell" "Ensuring shell loads $PRIVATE_ENV_FILE"
+  log_step "Shell" "Ensure shell loads private env"
   if [[ "$DRY_RUN" == "1" ]]; then
     printf "DRY-RUN: ensure source line exists in %s\n" "$shell_rc"
     return 0
@@ -317,15 +329,20 @@ setup_shell_rc() {
 }
 
 main() {
-  log_step "Start" "Codex Bootstrap"
+  print_banner
+  validate_env_key
+  log_step "1/7" "Inspect bootstrap settings"
   log_info "Profile: $BOOTSTRAP_PROFILE"
-  log_info "Provider: official openai"
+  log_info "Provider: $PROVIDER_ID"
+  log_info "Provider env key: $PROVIDER_ENV_KEY"
   log_info "Base URL: $API_BASE_URL"
   [[ -n "$API_KEY" ]] && log_info "API key: $(mask_secret "$API_KEY")"
 
   local source_dir
+  log_step "2/7" "Load profile and template assets"
   source_dir="$(download_source)"
   load_profile "$source_dir"
+  log_step "3/7" "Install or verify Codex CLI"
   install_codex
   write_private_env
   write_config

@@ -1,6 +1,6 @@
 # Codex Bootstrap
 
-Personal Codex bootstrapper that keeps the official `openai` provider enabled while routing API calls through `openai_base_url` when needed. This preserves the best chance of compatibility with Codex plugins, apps, MCP, browser tools, and subagents.
+Personal Codex bootstrapper for a simple gateway-oriented setup. It writes a `custom` model provider into `~/.codex/config.toml`, stores the API key in `~/.codex/private.env`, and keeps the install flow colorful and easy to read.
 
 ## Quick Start
 
@@ -30,23 +30,27 @@ CODEX_TOKEN="test-token" ./install.sh --local . --dry-run --profile default
 ## What It Does
 
 - Installs `@openai/codex` if missing, using Bun first and npm as fallback.
-- Writes `~/.codex/private.env` with `OPENAI_API_KEY` and file mode `600`.
-- Writes `~/.codex/config.toml` with `model_provider = "openai"` and `openai_base_url = "$CODEX_API_URL"`.
-- Enables stable Codex features such as plugins, browser use, multi-agent support, tool search, and workspace dependencies.
-- Enables the bundled browser plugin when available.
+- Writes `~/.codex/private.env` with `CODEX_API_KEY` and file mode `600`.
+- Writes `~/.codex/config.toml` with `model_provider = "custom"` and `[model_providers."custom"]`.
+- Defaults to `model = "gpt-5.5"` and `model_reasoning_effort = "high"`.
+- Enables the bundled browser plugin entry when available.
 - Installs `~/.codex/rules/default.rules` and a project `AGENTS.md` template.
 - Backs up existing config/rule files before replacing them.
 
-## Why Not A Custom Provider?
-
-Custom providers can work for model calls, but some Codex plugin/app/MCP paths are most compatible with the built-in `openai` provider. This bootstrapper keeps the official provider and only changes the base URL.
-
-The generated core config looks like this:
+## Generated Config
 
 ```toml
-model_provider = "openai"
-openai_base_url = "https://api.example.com/v1"
+model = "gpt-5.5"
+model_reasoning_effort = "high"
 preferred_auth_method = "apikey"
+disable_response_storage = true
+model_provider = "custom"
+
+[model_providers."custom"]
+name = "custom"
+base_url = "https://api.example.com/v1"
+wire_api = "responses"
+env_key = "CODEX_API_KEY"
 ```
 
 ## Options
@@ -63,6 +67,16 @@ preferred_auth_method = "apikey"
 --skip-codex-install Do not install @openai/codex
 --skip-shell-rc      Do not update .zshrc/.bashrc
 --no-bun             Do not install Bun automatically
+```
+
+Provider/env customization:
+
+```bash
+CODEX_PROVIDER_ID="sss" \
+CODEX_PROVIDER_ENV_KEY="SSS_API_KEY" \
+CODEX_TOKEN="YOUR_TOKEN" \
+CODEX_API_URL="https://api.example.com/v1" \
+./install.sh --local .
 ```
 
 ## Release Flow
