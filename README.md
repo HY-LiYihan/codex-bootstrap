@@ -118,6 +118,64 @@ $env:CLAUDE_CLIENT_TOKEN='test-token'; .\agents\claudecode\install.ps1 -DryRun -
 $env:OPENCLAW_TOKEN='test-token'; .\agents\openclaw\install.ps1 -DryRun
 ```
 
+## Agent Switch
+
+`switch.js` is the provider/profile switcher layer. It is the part meant to replace the day-to-day value of tools like `ccswitch`: save one gateway profile once, then apply it across Codex, Claude Code, and OpenClaw.
+
+Add a profile:
+
+```bash
+node switch.js add sss \
+  --token YOUR_TOKEN \
+  --base-url https://node-hk.sssaicode.com/api \
+  --codex-url https://codex1.sssaicode.com/api/v1 \
+  --openclaw-model anthropic/claude-opus-4-7
+```
+
+Apply it everywhere:
+
+```bash
+node switch.js use sss
+```
+
+Apply it only to Claude Code:
+
+```bash
+node switch.js use sss --agents claudecode
+```
+
+Fixed curl entrypoints:
+
+macOS/Linux:
+
+```bash
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/switch.sh)" -- add sss --token YOUR_TOKEN --base-url https://node-hk.sssaicode.com/api
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/switch.sh)" -- use sss
+```
+
+Windows PowerShell:
+
+```powershell
+$tmp = Join-Path $env:TEMP 'agent-switch.ps1'
+Invoke-WebRequest -Uri https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/switch.ps1 -OutFile $tmp
+& $tmp add sss --token YOUR_TOKEN --base-url https://node-hk.sssaicode.com/api
+& $tmp use sss
+```
+
+Check state:
+
+```bash
+node switch.js list
+node switch.js current
+node switch.js doctor
+```
+
+Claude Code note:
+
+- The switcher writes `~/.agent-bootstrap/claude-code-env.sh` and `~/.agent-bootstrap/claude-code-env.ps1`.
+- Those files unset `CLAUDE_CODE_OAUTH_TOKEN`, because that variable can override API-token based Claude Code settings.
+- Run `node switch.js shell-hook` to print the shell/profile line to source the active Claude environment.
+
 ## Release Flow
 
 Use semantic version tags for immutable releases, and move `stable` / `latest` to the recommended release so install commands do not need to change.

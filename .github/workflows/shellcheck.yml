@@ -14,12 +14,20 @@ jobs:
         run: |
           bash -n install.sh
           find agents -name 'install.sh' -print0 | xargs -0 -I{} bash -n {}
+          bash -n switch.sh
       - name: Codex dispatcher dry run
         run: AGENT=codex CODEX_TOKEN=test-token ./install.sh --local . --dry-run --skip-codex-install --skip-shell-rc --yes
       - name: Claude Code dispatcher dry run
         run: AGENT=claudecode CLAUDE_TOKEN=test-token ./install.sh --local . --dry-run --skip-claude-install
       - name: OpenClaw dispatcher dry run
         run: AGENT=openclaw OPENCLAW_TOKEN=test-token ./install.sh --local . --dry-run
+      - name: Agent switch dry run
+        run: |
+          export AGENT_BOOTSTRAP_HOME="$(mktemp -d)"
+          node switch.js add test --token test-token --base-url https://node-hk.sssaicode.com/api
+          node switch.js list
+          node switch.js use test --dry-run
+          node switch.js shell-hook
 
   windows-powershell:
     runs-on: windows-latest
@@ -55,3 +63,10 @@ jobs:
         run: |
           $env:OPENCLAW_TOKEN = 'test-token'
           .\agents\openclaw\install.ps1 -DryRun
+      - name: Agent switch PowerShell wrapper syntax
+        shell: pwsh
+        run: |
+          $tokens = $null
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path .\switch.ps1).Path, [ref]$tokens, [ref]$errors) | Out-Null
+          if ($errors.Count -gt 0) { $errors | Format-List | Out-String | Write-Host; exit 1 }
