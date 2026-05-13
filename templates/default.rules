@@ -5,3 +5,5 @@
 - Use subagents for long-running exploration, repository scans, and verification when available.
 - Prefer small, reversible changes with backups before modifying user-level Codex configuration.
 - Keep project-specific instructions in AGENTS.md and global behavioral defaults in ~/.codex/rules/default.rules.
+- Treat danger-full-access as a productivity mode, not a reason to skip path checks, tests, or user-change protection.
+- After meaningful edits, run the narrowest available verification before reporting success.

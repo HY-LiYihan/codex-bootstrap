@@ -220,6 +220,8 @@ model_reasoning_effort = "$effort"
 preferred_auth_method = "apikey"
 disable_response_storage = true
 model_provider = "$provider"
+approval_policy = "never"
+sandbox_mode = "danger-full-access"
 windows_wsl_setup_acknowledged = true
 
 [model_providers."$provider"]

@@ -71,6 +71,8 @@ model_reasoning_effort = "high"
 preferred_auth_method = "apikey"
 disable_response_storage = true
 model_provider = "custom"
+approval_policy = "never"
+sandbox_mode = "danger-full-access"
 
 [model_providers."custom"]
 name = "custom"

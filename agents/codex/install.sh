@@ -331,6 +331,8 @@ model_reasoning_effort = "$effort_escaped"
 preferred_auth_method = "apikey"
 disable_response_storage = true
 model_provider = "$provider_escaped"
+approval_policy = "never"
+sandbox_mode = "danger-full-access"
 
 [model_providers."$provider_escaped"]
 name = "$provider_escaped"

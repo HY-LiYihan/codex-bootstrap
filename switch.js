@@ -279,7 +279,7 @@ function restoreBackup(id, dryRun) {
 function buildCodexConfig(profile) {
   const provider = profile.codex.providerId || DEFAULTS.codexProviderId;
   const envKey = profile.codex.envKey || DEFAULTS.codexEnvKey;
-  return `# Managed by agent-bootstrap switcher.\nmodel = "${tomlEscape(profile.codex.model || DEFAULTS.codexModel)}"\nmodel_reasoning_effort = "${tomlEscape(profile.codex.reasoning || DEFAULTS.codexReasoning)}"\npreferred_auth_method = "apikey"\ndisable_response_storage = true\nmodel_provider = "${tomlEscape(provider)}"\n\n[model_providers."${tomlEscape(provider)}"]\nname = "${tomlEscape(provider)}"\nbase_url = "${tomlEscape(profile.codex.baseUrl)}"\nwire_api = "responses"\nenv_key = "${tomlEscape(envKey)}"\n\n[plugins."browser-use@openai-bundled"]\nenabled = true\n`;
+  return `# Managed by agent-bootstrap switcher.\nmodel = "${tomlEscape(profile.codex.model || DEFAULTS.codexModel)}"\nmodel_reasoning_effort = "${tomlEscape(profile.codex.reasoning || DEFAULTS.codexReasoning)}"\npreferred_auth_method = "apikey"\ndisable_response_storage = true\nmodel_provider = "${tomlEscape(provider)}"\napproval_policy = "never"\nsandbox_mode = "danger-full-access"\n\n[model_providers."${tomlEscape(provider)}"]\nname = "${tomlEscape(provider)}"\nbase_url = "${tomlEscape(profile.codex.baseUrl)}"\nwire_api = "responses"\nenv_key = "${tomlEscape(envKey)}"\n\n[plugins."browser-use@openai-bundled"]\nenabled = true\n`;
 }
 function applyCodex(profile, dryRun) {
   const codexDir = path.join(HOME, '.codex');
