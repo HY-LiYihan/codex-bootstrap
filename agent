@@ -1,0 +1,139 @@
+# Agent Bootstrap interactive entrypoint.
+# Default: wget https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/agent -O agent && AGENT_TOKEN=YOUR_TOKEN . ./agent
+# Menu:    wget https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/agent -O agent && . ./agent --menu
+
+agent_bootstrap_main() {
+  repo="${BOOTSTRAP_REPO:-HY-LiYihan/agent-bootstrap}"
+  ref="${BOOTSTRAP_REF:-stable}"
+  raw="https://raw.githubusercontent.com/${repo}/${ref}"
+  cyan='\033[0;36m'; green='\033[0;32m'; yellow='\033[1;33m'; red='\033[0;31m'; bold='\033[1m'; nc='\033[0m'
+  agent=""; token=""; base_url=""; model=""; choice=""; codex_base_url=""
+
+  ab_info() { printf "%b[INFO]%b %s\n" "$cyan" "$nc" "$1"; }
+  ab_ok() { printf "%b[OK]%b %s\n" "$green" "$nc" "$1"; }
+  ab_warn() { printf "%b[WARN]%b %s\n" "$yellow" "$nc" "$1"; }
+  ab_error() { printf "%b[ERROR]%b %s\n" "$red" "$nc" "$1"; return 1; }
+  ab_run_installer() {
+    run_agent="$1"; run_token="$2"; run_base_url="$3"; run_model="${4:-}"
+    install_args="${AGENT_BOOTSTRAP_INSTALL_ARGS:-}"
+    if [ -n "$install_args" ]; then
+      eval "set -- $install_args"
+    else
+      set --
+    fi
+
+    if [ -n "${AGENT_BOOTSTRAP_LOCAL_SOURCE:-}" ] && [ -f "${AGENT_BOOTSTRAP_LOCAL_SOURCE}/install.sh" ]; then
+      AGENT="$run_agent" AGENT_TOKEN="$run_token" AGENT_BASE_URL="$run_base_url" AGENT_MODEL="$run_model" bash "${AGENT_BOOTSTRAP_LOCAL_SOURCE}/install.sh" "$@"
+      return $?
+    fi
+
+    tmp_file="${TMPDIR:-/tmp}/agent-bootstrap-install-$$.sh"
+    if command -v curl >/dev/null 2>&1; then
+      curl -fsSL "$raw/install.sh" -o "$tmp_file" || return 1
+    elif command -v wget >/dev/null 2>&1; then
+      wget -qO "$tmp_file" "$raw/install.sh" || return 1
+    else
+      ab_error "curl or wget is required"
+      return 1
+    fi
+    AGENT="$run_agent" AGENT_TOKEN="$run_token" AGENT_BASE_URL="$run_base_url" AGENT_MODEL="$run_model" bash "$tmp_file" "$@"
+  }
+  ab_read() {
+    prompt="$1"; var_name="$2"; default_value="${3:-}"
+    answer=""
+    if [ -n "$default_value" ]; then
+      printf "%b%s%b [%s]: " "$bold" "$prompt" "$nc" "$default_value" > /dev/tty
+    else
+      printf "%b%s%b: " "$bold" "$prompt" "$nc" > /dev/tty
+    fi
+    IFS= read -r answer < /dev/tty || answer=""
+    if [ -z "$answer" ]; then answer="$default_value"; fi
+    case "$var_name" in
+      agent) agent="$answer" ;;
+      token) token="$answer" ;;
+      base_url) base_url="$answer" ;;
+      model) model="$answer" ;;
+      choice) choice="$answer" ;;
+      codex_base_url) codex_base_url="$answer" ;;
+    esac
+  }
+
+  if [ "${1:-}" = "--menu" ] || [ "${AGENT_BOOTSTRAP_MENU:-0}" = "1" ]; then
+    agent_bootstrap_menu "$@"
+    return $?
+  fi
+
+  token="${AGENT_TOKEN:-${CODEX_TOKEN:-}}"
+  base_url="${AGENT_BASE_URL:-${CODEX_API_URL:-https://codex1.sssaicode.com/api/v1}}"
+  if [ -z "$token" ]; then
+    ab_error "Missing AGENT_TOKEN. Example: AGENT_TOKEN=YOUR_TOKEN . ./agent"
+    ab_info "For interactive setup, run: . ./agent --menu"
+    return 1
+  fi
+
+  printf "\n%b+--------------------------------------------------+%b\n" "$cyan" "$nc"
+  printf "%b|%b %bAgent Bootstrap Default%b                         %b|%b\n" "$cyan" "$nc" "$bold" "$nc" "$cyan" "$nc"
+  printf "%b|%b Codex full-auto ready                         %b|%b\n" "$cyan" "$nc" "$cyan" "$nc"
+  printf "%b+--------------------------------------------------+%b\n\n" "$cyan" "$nc"
+  ab_info "Agent: codex"
+  ab_info "Base URL: $base_url"
+  ab_run_installer "codex" "$token" "$base_url"
+}
+
+agent_bootstrap_menu() {
+  printf "\n%b+--------------------------------------------------+%b\n" "$cyan" "$nc"
+  printf "%b|%b %bAgent Bootstrap Interactive%b                     %b|%b\n" "$cyan" "$nc" "$bold" "$nc" "$cyan" "$nc"
+  printf "%b|%b one menu -> one ready agent                    %b|%b\n" "$cyan" "$nc" "$cyan" "$nc"
+  printf "%b+--------------------------------------------------+%b\n\n" "$cyan" "$nc"
+
+  cat <<MENU
+Choose an install target:
+  1) Codex full-auto default (recommended)
+  2) Claude Code
+  3) OpenClaw
+  4) All three agents with the same token/base URL
+  q) Quit
+MENU
+
+  ab_read "Select" choice "1"
+  case "$choice" in
+    1|codex|Codex) agent="codex" ;;
+    2|claude|claudecode|Claude) agent="claudecode" ;;
+    3|openclaw|claw|OpenClaw) agent="openclaw" ;;
+    4|all|All) agent="all" ;;
+    q|Q|quit|Quit) ab_warn "Cancelled"; return 0 ;;
+    *) ab_error "Unknown choice: $choice" || return 1 ;;
+  esac
+
+  case "$agent" in
+    codex)
+      ab_read "API token" token "${AGENT_TOKEN:-${CODEX_TOKEN:-}}"
+      ab_read "Codex API base URL" base_url "${AGENT_BASE_URL:-${CODEX_API_URL:-https://codex1.sssaicode.com/api/v1}}"
+      ab_run_installer "codex" "$token" "$base_url"
+      ;;
+    claudecode)
+      ab_read "API token" token "${AGENT_TOKEN:-${CLAUDE_TOKEN:-${CLAUDE_CLIENT_TOKEN:-}}}"
+      ab_read "Claude API base URL" base_url "${AGENT_BASE_URL:-${CLAUDE_API_URL:-https://node-hk.sssaicode.com/api}}"
+      ab_run_installer "claudecode" "$token" "$base_url"
+      ;;
+    openclaw)
+      ab_read "API token" token "${AGENT_TOKEN:-${OPENCLAW_TOKEN:-}}"
+      ab_read "OpenClaw base URL" base_url "${AGENT_BASE_URL:-${OPENCLAW_BASE_URL:-https://node-hk.sssaicode.com/api}}"
+      ab_read "OpenClaw model" model "${AGENT_MODEL:-${OPENCLAW_MODEL:-anthropic/claude-opus-4-7}}"
+      ab_run_installer "openclaw" "$token" "$base_url" "$model"
+      ;;
+    all)
+      ab_read "Shared API token" token "${AGENT_TOKEN:-}"
+      ab_read "Shared non-Codex base URL" base_url "${AGENT_BASE_URL:-https://node-hk.sssaicode.com/api}"
+      ab_read "Codex API base URL" codex_base_url "${CODEX_API_URL:-https://codex1.sssaicode.com/api/v1}"
+      ab_read "OpenClaw model" model "${AGENT_MODEL:-${OPENCLAW_MODEL:-anthropic/claude-opus-4-7}}"
+      ab_run_installer "codex" "$token" "$codex_base_url" || return 1
+      ab_run_installer "claudecode" "$token" "$base_url" || return 1
+      ab_run_installer "openclaw" "$token" "$base_url" "$model" || return 1
+      ;;
+  esac
+
+  ab_ok "Agent Bootstrap finished"
+}
+
+agent_bootstrap_main "$@"

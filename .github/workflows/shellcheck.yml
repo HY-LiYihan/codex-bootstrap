@@ -13,10 +13,13 @@ jobs:
       - name: Bash syntax check
         run: |
           bash -n install.sh
+          bash -n agent
           find agents -name 'install.sh' -print0 | xargs -0 -I{} bash -n {}
           bash -n switch.sh
       - name: Codex dispatcher dry run
         run: AGENT=codex AGENT_TOKEN=test-token AGENT_BASE_URL=https://codex1.sssaicode.com/api/v1 ./install.sh --local . --dry-run --skip-codex-install --skip-shell-rc --yes
+      - name: Default agent entrypoint dry run
+        run: AGENT_TOKEN=test-token AGENT_BOOTSTRAP_LOCAL_SOURCE=. AGENT_BOOTSTRAP_INSTALL_ARGS='--dry-run --skip-codex-install --skip-shell-rc --yes' bash -c '. ./agent'
       - name: Claude Code dispatcher dry run
         run: AGENT=claudecode AGENT_TOKEN=test-token AGENT_BASE_URL=https://node-hk.sssaicode.com/api ./install.sh --local . --dry-run --skip-claude-install
       - name: OpenClaw dispatcher dry run
@@ -48,6 +51,10 @@ jobs:
             }
           }
           if ($errorsFound) { exit 1 }
+      - name: Interactive entrypoint smoke check
+        shell: pwsh
+        run: |
+          if (-not (Test-Path .\agent.ps1)) { exit 1 }
       - name: Codex PowerShell dry run
         shell: pwsh
         run: |

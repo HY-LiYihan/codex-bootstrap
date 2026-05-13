@@ -16,6 +16,58 @@ Aliases:
 
 ## Quick Start
 
+There are two entry styles:
+
+1. Default one-line install: no menu, installs Codex with the recommended full-auto defaults.
+2. Interactive menu: choose Codex, Claude Code, OpenClaw, or all agents.
+
+Default one-line install on macOS/Linux:
+
+```bash
+wget https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/agent -O agent && AGENT_TOKEN="YOUR_TOKEN" . ./agent
+```
+
+This is the shortest recommended path: no menu, no extra choices, Codex ready with full-auto defaults.
+
+Default one-line install on Windows PowerShell:
+
+```powershell
+$env:AGENT_TOKEN='YOUR_TOKEN'; irm https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/agent.ps1 | iex
+```
+
+Interactive menu, similar in spirit to `wget http://fishros.com/install -O fishros && . fishros`:
+
+macOS/Linux:
+
+```bash
+wget https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/agent -O agent && . ./agent --menu
+```
+
+If `wget` is unavailable:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/agent -o agent && . ./agent --menu
+```
+
+Windows PowerShell:
+
+```powershell
+$env:AGENT_BOOTSTRAP_MENU='1'; irm https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/agent.ps1 | iex
+```
+
+The default one-line mode uses `https://codex1.sssaicode.com/api/v1` and writes the high-autonomy Codex config. The interactive menu's first option is the same Codex default.
+
+Online editable examples:
+
+- [examples/codex-default.sh](https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/examples/codex-default.sh)
+- [examples/claudecode-default.sh](https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/examples/claudecode-default.sh)
+- [examples/openclaw-default.sh](https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/examples/openclaw-default.sh)
+- [examples/codex-default.ps1](https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/examples/codex-default.ps1)
+- [examples/claudecode-default.ps1](https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/examples/claudecode-default.ps1)
+- [examples/openclaw-default.ps1](https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/examples/openclaw-default.ps1)
+
+Direct one-line install remains supported:
+
 The main contract is deliberately simple:
 
 - `AGENT`: `codex`, `claudecode`, or `openclaw`
