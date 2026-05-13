@@ -59,6 +59,7 @@ jobs:
         shell: pwsh
         run: |
           $env:CODEX_TOKEN = 'test-token'
+          $env:CODEX_API_URL = 'https://codex1.sssaicode.com/api/v1'
           .\agents\codex\install.ps1 -LocalSource . -DryRun -SkipCodexInstall -SkipProfileUpdate
       - name: Claude Code PowerShell dry run
         shell: pwsh
