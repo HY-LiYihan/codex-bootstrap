@@ -65,11 +65,13 @@ jobs:
         shell: pwsh
         run: |
           $env:CLAUDE_CLIENT_TOKEN = 'test-token'
+          $env:CLAUDE_API_URL = 'https://node-hk.sssaicode.com/api'
           .\agents\claudecode\install.ps1 -DryRun -SkipInstall
       - name: OpenClaw PowerShell dry run
         shell: pwsh
         run: |
           $env:OPENCLAW_TOKEN = 'test-token'
+          $env:OPENCLAW_BASE_URL = 'https://node-hk.sssaicode.com/api'
           .\agents\openclaw\install.ps1 -DryRun
       - name: Agent switch PowerShell wrapper syntax
         shell: pwsh
