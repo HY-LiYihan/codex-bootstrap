@@ -14,19 +14,19 @@ Agent Bootstrap replaces the core day-to-day provider switching workflow with a 
 Codex:
 
 ```bash
-AGENT=codex AGENT_TOKEN=YOUR_TOKEN AGENT_BASE_URL=https://codex1.sssaicode.com/api/v1 bash -c "$(curl -fsSL https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/install.sh)"
+AGENT=codex AGENT_TOKEN=YOUR_TOKEN AGENT_BASE_URL=YOUR_CODEX_BASE_URL bash -c "$(curl -fsSL https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/install.sh)"
 ```
 
 Claude Code:
 
 ```bash
-AGENT=claudecode AGENT_TOKEN=YOUR_TOKEN AGENT_BASE_URL=https://node-hk.sssaicode.com/api bash -c "$(curl -fsSL https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/install.sh)"
+AGENT=claudecode AGENT_TOKEN=YOUR_TOKEN AGENT_BASE_URL=YOUR_CLAUDE_BASE_URL bash -c "$(curl -fsSL https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/install.sh)"
 ```
 
 OpenClaw:
 
 ```bash
-AGENT=openclaw AGENT_TOKEN=YOUR_TOKEN AGENT_BASE_URL=https://node-hk.sssaicode.com/api AGENT_MODEL=anthropic/claude-opus-4-7 bash -c "$(curl -fsSL https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/install.sh)"
+AGENT=openclaw AGENT_TOKEN=YOUR_TOKEN AGENT_BASE_URL=YOUR_OPENCLAW_BASE_URL AGENT_MODEL=anthropic/claude-opus-4-7 bash -c "$(curl -fsSL https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/install.sh)"
 ```
 
 ## Common Workflow

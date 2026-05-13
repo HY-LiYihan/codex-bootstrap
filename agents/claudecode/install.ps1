@@ -1,7 +1,7 @@
 # Claude Code bootstrap for Windows PowerShell.
 param(
     [string]$Token = $(if ($env:CLAUDE_CLIENT_TOKEN) { $env:CLAUDE_CLIENT_TOKEN } elseif ($env:CLAUDE_TOKEN) { $env:CLAUDE_TOKEN } else { "" }),
-    [string]$BaseUrl = $(if ($env:CLAUDE_API_URL) { $env:CLAUDE_API_URL } else { "https://node-hk.sssaicode.com/api" }),
+    [string]$BaseUrl = $(if ($env:CLAUDE_API_URL) { $env:CLAUDE_API_URL } else { "" }),
     [string]$ClaudeHome = $(if ($env:CLAUDE_HOME) { $env:CLAUDE_HOME } else { Join-Path $env:USERPROFILE ".claude" }),
     [switch]$DryRun,
     [switch]$Force,
@@ -22,6 +22,11 @@ function Invoke-Run { param([string]$Description,[scriptblock]$Action) if ($DryR
 function Test-CommandExists { param([string]$Command) return [bool](Get-Command $Command -ErrorAction SilentlyContinue) }
 function Mask-Secret { param([string]$Value) if (-not $Value) { return "<missing>" }; if ($Value.Length -le 8) { return "<hidden>" }; return "$($Value.Substring(0,4))...$($Value.Substring($Value.Length-4))" }
 function Backup-File { param([string]$Path) if (Test-Path $Path) { $backup = "$Path.backup.$(Get-Date -Format 'yyyyMMdd_HHmmss')"; Invoke-Run "backup $Path" { Copy-Item $Path $backup -Force }; Write-Ok "Backup created: $backup" } }
+
+function Assert-RequiredInputs {
+    if (-not $Token) { Fail "Missing CLAUDE_CLIENT_TOKEN or CLAUDE_TOKEN" }
+    if (-not $BaseUrl) { Fail "Missing CLAUDE_API_URL" }
+}
 
 function Install-Claude {
     if ($SkipInstall) { Write-Info "Skipping Claude Code install"; return }
@@ -47,7 +52,7 @@ function Install-Claude {
 }
 
 function Write-ClaudeSettings {
-    if (-not $Token) { Fail "Missing CLAUDE_CLIENT_TOKEN or CLAUDE_TOKEN" }
+    Assert-RequiredInputs
     Invoke-Run "create $ClaudeHome" { New-Item -ItemType Directory -Path $ClaudeHome -Force | Out-Null }
     Backup-File $SettingsFile
     Backup-File $ClaudeJsonFile
@@ -81,6 +86,7 @@ Write-Host "+--------------------------------------------------+" -ForegroundCol
 Write-Step "1/7" "Inspect Claude Code settings"
 Write-Info "API URL: $BaseUrl"
 if ($Token) { Write-Info "Token: $(Mask-Secret $Token)" }
+Assert-RequiredInputs
 Write-Step "2/7" "Verify config directories"
 Write-Info "Claude home: $ClaudeHome"
 Write-Step "3/7" "Install or verify Claude Code CLI"

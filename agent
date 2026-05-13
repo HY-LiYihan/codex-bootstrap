@@ -1,5 +1,5 @@
 # Agent Bootstrap interactive entrypoint.
-# Default: wget https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/agent -O agent && AGENT_TOKEN=YOUR_TOKEN . ./agent
+# Default: wget https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/agent -O agent && AGENT_TOKEN=YOUR_TOKEN AGENT_BASE_URL=YOUR_BASE_URL . ./agent
 # Menu:    wget https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/agent -O agent && . ./agent --menu
 
 agent_bootstrap_main() {
@@ -57,6 +57,13 @@ agent_bootstrap_main() {
       codex_base_url) codex_base_url="$answer" ;;
     esac
   }
+  ab_require_pair() {
+    required_token="$1"; required_base_url="$2"
+    if [ -z "$required_token" ] || [ -z "$required_base_url" ]; then
+      ab_error "AGENT_TOKEN and AGENT_BASE_URL are both required."
+      return 1
+    fi
+  }
 
   if [ "${1:-}" = "--menu" ] || [ "${AGENT_BOOTSTRAP_MENU:-0}" = "1" ]; then
     agent_bootstrap_menu "$@"
@@ -64,9 +71,9 @@ agent_bootstrap_main() {
   fi
 
   token="${AGENT_TOKEN:-${CODEX_TOKEN:-}}"
-  base_url="${AGENT_BASE_URL:-${CODEX_API_URL:-https://codex1.sssaicode.com/api/v1}}"
-  if [ -z "$token" ]; then
-    ab_error "Missing AGENT_TOKEN. Example: AGENT_TOKEN=YOUR_TOKEN . ./agent"
+  base_url="${AGENT_BASE_URL:-${CODEX_API_URL:-}}"
+  if [ -z "$token" ] || [ -z "$base_url" ]; then
+    ab_error "Missing AGENT_TOKEN or AGENT_BASE_URL. Example: AGENT_TOKEN=YOUR_TOKEN AGENT_BASE_URL=YOUR_BASE_URL . ./agent"
     ab_info "For interactive setup, run: . ./agent --menu"
     return 1
   fi
@@ -88,7 +95,7 @@ agent_bootstrap_menu() {
 
   cat <<MENU
 Choose an install target:
-  1) Codex full-auto default (recommended)
+  1) Codex full-auto
   2) Claude Code
   3) OpenClaw
   4) All three agents with the same token/base URL
@@ -108,25 +115,35 @@ MENU
   case "$agent" in
     codex)
       ab_read "API token" token "${AGENT_TOKEN:-${CODEX_TOKEN:-}}"
-      ab_read "Codex API base URL" base_url "${AGENT_BASE_URL:-${CODEX_API_URL:-https://codex1.sssaicode.com/api/v1}}"
+      ab_info "Common Codex option: https://codex1.sssaicode.com/api/v1"
+      ab_read "Codex API base URL" base_url "${AGENT_BASE_URL:-${CODEX_API_URL:-}}"
+      ab_require_pair "$token" "$base_url" || return 1
       ab_run_installer "codex" "$token" "$base_url"
       ;;
     claudecode)
       ab_read "API token" token "${AGENT_TOKEN:-${CLAUDE_TOKEN:-${CLAUDE_CLIENT_TOKEN:-}}}"
-      ab_read "Claude API base URL" base_url "${AGENT_BASE_URL:-${CLAUDE_API_URL:-https://node-hk.sssaicode.com/api}}"
+      ab_info "Common Claude option: https://node-hk.sssaicode.com/api"
+      ab_read "Claude API base URL" base_url "${AGENT_BASE_URL:-${CLAUDE_API_URL:-}}"
+      ab_require_pair "$token" "$base_url" || return 1
       ab_run_installer "claudecode" "$token" "$base_url"
       ;;
     openclaw)
       ab_read "API token" token "${AGENT_TOKEN:-${OPENCLAW_TOKEN:-}}"
-      ab_read "OpenClaw base URL" base_url "${AGENT_BASE_URL:-${OPENCLAW_BASE_URL:-https://node-hk.sssaicode.com/api}}"
+      ab_info "Common OpenClaw option: https://node-hk.sssaicode.com/api"
+      ab_read "OpenClaw base URL" base_url "${AGENT_BASE_URL:-${OPENCLAW_BASE_URL:-}}"
       ab_read "OpenClaw model" model "${AGENT_MODEL:-${OPENCLAW_MODEL:-anthropic/claude-opus-4-7}}"
+      ab_require_pair "$token" "$base_url" || return 1
       ab_run_installer "openclaw" "$token" "$base_url" "$model"
       ;;
     all)
       ab_read "Shared API token" token "${AGENT_TOKEN:-}"
-      ab_read "Shared non-Codex base URL" base_url "${AGENT_BASE_URL:-https://node-hk.sssaicode.com/api}"
-      ab_read "Codex API base URL" codex_base_url "${CODEX_API_URL:-https://codex1.sssaicode.com/api/v1}"
+      ab_info "Common non-Codex option: https://node-hk.sssaicode.com/api"
+      ab_read "Shared non-Codex base URL" base_url "${AGENT_BASE_URL:-}"
+      ab_info "Common Codex option: https://codex1.sssaicode.com/api/v1"
+      ab_read "Codex API base URL" codex_base_url "${CODEX_API_URL:-}"
       ab_read "OpenClaw model" model "${AGENT_MODEL:-${OPENCLAW_MODEL:-anthropic/claude-opus-4-7}}"
+      ab_require_pair "$token" "$base_url" || return 1
+      ab_require_pair "$token" "$codex_base_url" || return 1
       ab_run_installer "codex" "$token" "$codex_base_url" || return 1
       ab_run_installer "claudecode" "$token" "$base_url" || return 1
       ab_run_installer "openclaw" "$token" "$base_url" "$model" || return 1

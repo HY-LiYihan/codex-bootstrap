@@ -18,21 +18,21 @@ Aliases:
 
 There are two entry styles:
 
-1. Default one-line install: no menu, installs Codex with the recommended full-auto defaults.
+1. Default one-line install: no menu, installs Codex after you explicitly pass both token and base URL.
 2. Interactive menu: choose Codex, Claude Code, OpenClaw, or all agents.
 
 Default one-line install on macOS/Linux:
 
 ```bash
-wget https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/agent -O agent && AGENT_TOKEN="YOUR_TOKEN" . ./agent
+wget https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/agent -O agent && AGENT_TOKEN="YOUR_TOKEN" AGENT_BASE_URL="YOUR_BASE_URL" . ./agent
 ```
 
-This is the shortest recommended path: no menu, no extra choices, Codex ready with full-auto defaults.
+This is the shortest recommended path: no menu and no hidden base URL. `AGENT_TOKEN` and `AGENT_BASE_URL` are both required.
 
 Default one-line install on Windows PowerShell:
 
 ```powershell
-$env:AGENT_TOKEN='YOUR_TOKEN'; irm https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/agent.ps1 | iex
+$env:AGENT_TOKEN='YOUR_TOKEN'; $env:AGENT_BASE_URL='YOUR_BASE_URL'; irm https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/agent.ps1 | iex
 ```
 
 Interactive menu, similar in spirit to `wget http://fishros.com/install -O fishros && . fishros`:
@@ -55,7 +55,7 @@ Windows PowerShell:
 $env:AGENT_BOOTSTRAP_MENU='1'; irm https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/agent.ps1 | iex
 ```
 
-The default one-line mode uses `https://codex1.sssaicode.com/api/v1` and writes the high-autonomy Codex config. The interactive menu's first option is the same Codex default.
+The default one-line mode writes the high-autonomy Codex config, but it does not provide a built-in key or base URL. The interactive menu shows common URL options as hints and still asks you to enter the value.
 
 Online editable examples:
 
@@ -78,15 +78,15 @@ The main contract is deliberately simple:
 macOS/Linux:
 
 ```bash
-AGENT=codex AGENT_TOKEN="YOUR_TOKEN" AGENT_BASE_URL="https://codex1.sssaicode.com/api/v1" bash -c "$(curl -fsSL https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/install.sh)"
+AGENT=codex AGENT_TOKEN="YOUR_TOKEN" AGENT_BASE_URL="YOUR_CODEX_BASE_URL" bash -c "$(curl -fsSL https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/install.sh)"
 ```
 
 ```bash
-AGENT=claudecode AGENT_TOKEN="YOUR_TOKEN" AGENT_BASE_URL="https://node-hk.sssaicode.com/api" bash -c "$(curl -fsSL https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/install.sh)"
+AGENT=claudecode AGENT_TOKEN="YOUR_TOKEN" AGENT_BASE_URL="YOUR_CLAUDE_BASE_URL" bash -c "$(curl -fsSL https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/install.sh)"
 ```
 
 ```bash
-AGENT=openclaw AGENT_TOKEN="YOUR_TOKEN" AGENT_BASE_URL="https://node-hk.sssaicode.com/api" AGENT_MODEL="anthropic/claude-opus-4-7" bash -c "$(curl -fsSL https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/install.sh)"
+AGENT=openclaw AGENT_TOKEN="YOUR_TOKEN" AGENT_BASE_URL="YOUR_OPENCLAW_BASE_URL" AGENT_MODEL="anthropic/claude-opus-4-7" bash -c "$(curl -fsSL https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/install.sh)"
 ```
 
 Windows PowerShell:
@@ -94,21 +94,21 @@ Windows PowerShell:
 ```powershell
 $env:AGENT='codex'
 $env:AGENT_TOKEN='YOUR_TOKEN'
-$env:AGENT_BASE_URL='https://codex1.sssaicode.com/api/v1'
+$env:AGENT_BASE_URL='YOUR_CODEX_BASE_URL'
 irm https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/install.ps1 | iex
 ```
 
 ```powershell
 $env:AGENT='claudecode'
 $env:AGENT_TOKEN='YOUR_TOKEN'
-$env:AGENT_BASE_URL='https://node-hk.sssaicode.com/api'
+$env:AGENT_BASE_URL='YOUR_CLAUDE_BASE_URL'
 irm https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/install.ps1 | iex
 ```
 
 ```powershell
 $env:AGENT='openclaw'
 $env:AGENT_TOKEN='YOUR_TOKEN'
-$env:AGENT_BASE_URL='https://node-hk.sssaicode.com/api'
+$env:AGENT_BASE_URL='YOUR_OPENCLAW_BASE_URL'
 $env:AGENT_MODEL='anthropic/claude-opus-4-7'
 irm https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/install.ps1 | iex
 ```
@@ -128,7 +128,7 @@ sandbox_mode = "danger-full-access"
 
 [model_providers."custom"]
 name = "custom"
-base_url = "https://codex1.sssaicode.com/api/v1"
+base_url = "YOUR_CODEX_BASE_URL"
 wire_api = "responses"
 env_key = "CODEX_API_KEY"
 ```

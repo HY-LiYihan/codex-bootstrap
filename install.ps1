@@ -67,6 +67,24 @@ function Set-AgentEnv {
     }
 }
 
+function Assert-AgentEnv {
+    param([string]$Normalized)
+    switch ($Normalized) {
+        "codex" {
+            if ((-not $env:CODEX_TOKEN) -and (-not $env:OPENAI_API_KEY)) { Fail "Missing AGENT_TOKEN, CODEX_TOKEN, or OPENAI_API_KEY." }
+            if ((-not $env:CODEX_API_URL) -and (-not $env:OPENAI_BASE_URL)) { Fail "Missing AGENT_BASE_URL, CODEX_API_URL, or OPENAI_BASE_URL." }
+        }
+        "claudecode" {
+            if ((-not $env:CLAUDE_TOKEN) -and (-not $env:CLAUDE_CLIENT_TOKEN)) { Fail "Missing AGENT_TOKEN, CLAUDE_TOKEN, or CLAUDE_CLIENT_TOKEN." }
+            if (-not $env:CLAUDE_API_URL) { Fail "Missing AGENT_BASE_URL or CLAUDE_API_URL." }
+        }
+        "openclaw" {
+            if (-not $env:OPENCLAW_TOKEN) { Fail "Missing AGENT_TOKEN or OPENCLAW_TOKEN." }
+            if ((-not $env:OPENCLAW_BASE_URL) -and (-not $env:OPENCLAW_API_URL)) { Fail "Missing AGENT_BASE_URL, OPENCLAW_BASE_URL, or OPENCLAW_API_URL." }
+        }
+    }
+}
+
 function Get-SourceDir {
     if ($LocalSource) {
         if (-not (Test-Path $LocalSource)) { Fail "Local source not found: $LocalSource" }
@@ -100,6 +118,7 @@ function Main {
 
     $normalized = Normalize-Agent $Agent
     Set-AgentEnv $normalized
+    Assert-AgentEnv $normalized
     $sourceDir = Get-SourceDir
     $installer = Join-Path $sourceDir "agents\$normalized\install.ps1"
     if (-not (Test-Path $installer)) { Fail "Installer not found: $installer" }

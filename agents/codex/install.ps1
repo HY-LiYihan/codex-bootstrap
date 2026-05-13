@@ -3,7 +3,7 @@
 
 param(
     [string]$Token = $(if ($env:CODEX_TOKEN) { $env:CODEX_TOKEN } else { $env:OPENAI_API_KEY }),
-    [string]$BaseUrl = $(if ($env:CODEX_API_URL) { $env:CODEX_API_URL } elseif ($env:OPENAI_BASE_URL) { $env:OPENAI_BASE_URL } else { "https://api.openai.com/v1" }),
+    [string]$BaseUrl = $(if ($env:CODEX_API_URL) { $env:CODEX_API_URL } elseif ($env:OPENAI_BASE_URL) { $env:OPENAI_BASE_URL } else { "" }),
     [string]$ProviderId = $(if ($env:CODEX_PROVIDER_ID) { $env:CODEX_PROVIDER_ID } else { "custom" }),
     [string]$ProviderEnvKey = $(if ($env:CODEX_PROVIDER_ENV_KEY) { $env:CODEX_PROVIDER_ENV_KEY } else { "CODEX_API_KEY" }),
     [string]$Model = $(if ($env:CODEX_MODEL) { $env:CODEX_MODEL } else { "gpt-5.5" }),
@@ -94,6 +94,11 @@ function Assert-EnvKey {
     if ($ProviderEnvKey -notmatch '^[A-Za-z_][A-Za-z0-9_]*$') {
         Fail "Invalid CODEX_PROVIDER_ENV_KEY: $ProviderEnvKey"
     }
+}
+
+function Assert-RequiredInputs {
+    if (-not $Token) { Fail "Missing CODEX_TOKEN or OPENAI_API_KEY" }
+    if (-not $BaseUrl) { Fail "Missing CODEX_API_URL or OPENAI_BASE_URL" }
 }
 
 function Get-SourceDir {
@@ -282,6 +287,7 @@ function Main {
     if ($Help) { Show-Help; return }
     Write-Banner
     Assert-EnvKey
+    Assert-RequiredInputs
 
     Write-Step "1/7" "Inspect system and bootstrap settings"
     Write-Info "PowerShell: $($PSVersionTable.PSVersion)"

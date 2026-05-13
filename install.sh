@@ -75,6 +75,24 @@ prepare_agent_env() {
   esac
 }
 
+validate_agent_env() {
+  local normalized="$1"
+  case "$normalized" in
+    codex)
+      [[ -n "${CODEX_TOKEN:-${OPENAI_API_KEY:-}}" ]] || fail "Missing AGENT_TOKEN, CODEX_TOKEN, or OPENAI_API_KEY."
+      [[ -n "${CODEX_API_URL:-${OPENAI_BASE_URL:-}}" ]] || fail "Missing AGENT_BASE_URL, CODEX_API_URL, or OPENAI_BASE_URL."
+      ;;
+    claudecode)
+      [[ -n "${CLAUDE_TOKEN:-${CLAUDE_CLIENT_TOKEN:-}}" ]] || fail "Missing AGENT_TOKEN, CLAUDE_TOKEN, or CLAUDE_CLIENT_TOKEN."
+      [[ -n "${CLAUDE_API_URL:-}" ]] || fail "Missing AGENT_BASE_URL or CLAUDE_API_URL."
+      ;;
+    openclaw)
+      [[ -n "${OPENCLAW_TOKEN:-}" ]] || fail "Missing AGENT_TOKEN or OPENCLAW_TOKEN."
+      [[ -n "${OPENCLAW_BASE_URL:-${OPENCLAW_API_URL:-}}" ]] || fail "Missing AGENT_BASE_URL, OPENCLAW_BASE_URL, or OPENCLAW_API_URL."
+      ;;
+  esac
+}
+
 download_source() {
   if [[ -n "$LOCAL_SOURCE" ]]; then
     [[ -d "$LOCAL_SOURCE" ]] || fail "Local source not found: $LOCAL_SOURCE"
@@ -145,6 +163,7 @@ main() {
   local normalized source_dir installer
   normalized="$(normalize_agent "$AGENT")" || fail "Unknown agent: $AGENT"
   prepare_agent_env "$normalized"
+  validate_agent_env "$normalized"
   source_dir="$(download_source)"
   installer="$source_dir/agents/$normalized/install.sh"
 

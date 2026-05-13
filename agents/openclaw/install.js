@@ -8,7 +8,7 @@ const childProcess = require('node:child_process');
 
 const dryRun = process.argv.includes('--dry-run') || process.env.AGENT_BOOTSTRAP_DRY_RUN === '1';
 const token = process.env.OPENCLAW_TOKEN || process.env.AGENT_TOKEN || '';
-const baseUrl = process.env.OPENCLAW_BASE_URL || process.env.OPENCLAW_API_URL || 'https://node-hk.sssaicode.com/api';
+const baseUrl = process.env.OPENCLAW_BASE_URL || process.env.OPENCLAW_API_URL || '';
 const model = process.env.OPENCLAW_MODEL || 'anthropic/claude-opus-4-7';
 const configDir = process.env.OPENCLAW_CONFIG_DIR || path.join(os.homedir(), '.openclaw');
 
@@ -55,6 +55,7 @@ function main() {
   console.log('');
 
   if (!token) fail('Missing OPENCLAW_TOKEN');
+  if (!baseUrl) fail('Missing OPENCLAW_BASE_URL or OPENCLAW_API_URL');
   log('INFO', `Config dir: ${configDir}`);
   log('INFO', `Base URL: ${baseUrl}`);
   log('INFO', `Model: ${model}`);

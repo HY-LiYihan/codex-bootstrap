@@ -11,7 +11,7 @@ BOOTSTRAP_PROFILE="${CODEX_PROFILE:-default}"
 CODEX_HOME="${CODEX_HOME:-$HOME/.codex}"
 CONFIG_FILE="$CODEX_HOME/config.toml"
 PRIVATE_ENV_FILE="${CODEX_PRIVATE_ENV_FILE:-$CODEX_HOME/private.env}"
-API_BASE_URL="${CODEX_API_URL:-${OPENAI_BASE_URL:-https://api.openai.com/v1}}"
+API_BASE_URL="${CODEX_API_URL:-${OPENAI_BASE_URL:-}}"
 API_KEY="${CODEX_TOKEN:-${OPENAI_API_KEY:-}}"
 PROVIDER_ID="${CODEX_PROVIDER_ID:-custom}"
 PROVIDER_ENV_KEY="${CODEX_PROVIDER_ENV_KEY:-CODEX_API_KEY}"
@@ -109,6 +109,11 @@ done
 command_exists() { command -v "$1" >/dev/null 2>&1; }
 validate_env_key() {
   [[ "$PROVIDER_ENV_KEY" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] || fail "Invalid CODEX_PROVIDER_ENV_KEY: $PROVIDER_ENV_KEY"
+}
+
+validate_required_inputs() {
+  [[ -n "$API_KEY" ]] || fail "Missing CODEX_TOKEN or OPENAI_API_KEY"
+  [[ -n "$API_BASE_URL" ]] || fail "Missing CODEX_API_URL or OPENAI_BASE_URL"
 }
 
 detect_platform() {
@@ -395,6 +400,7 @@ setup_shell_rc() {
 main() {
   print_banner
   validate_env_key
+  validate_required_inputs
   detect_platform
   log_step "1/7" "Inspect system and bootstrap settings"
   log_info "OS: $OS_NAME ($OS_ID/$ARCH_NAME)"

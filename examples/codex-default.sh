@@ -1,5 +1,5 @@
-# Edit YOUR_TOKEN, then run this file or paste the command.
+# Edit YOUR_TOKEN and YOUR_CODEX_BASE_URL, then run this file or paste the command.
 AGENT=codex \
 AGENT_TOKEN="YOUR_TOKEN" \
-AGENT_BASE_URL="https://codex1.sssaicode.com/api/v1" \
+AGENT_BASE_URL="YOUR_CODEX_BASE_URL" \
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/install.sh)"

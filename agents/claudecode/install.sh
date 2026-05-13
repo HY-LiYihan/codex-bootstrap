@@ -5,7 +5,7 @@ set -euo pipefail
 IFS=$'\n\t'
 
 CLAUDE_TOKEN_VALUE="${CLAUDE_TOKEN:-${CLAUDE_CLIENT_TOKEN:-}}"
-CLAUDE_BASE_URL="${CLAUDE_API_URL:-https://node-hk.sssaicode.com/api}"
+CLAUDE_BASE_URL="${CLAUDE_API_URL:-}"
 CLAUDE_HOME="${CLAUDE_HOME:-$HOME/.claude}"
 SETTINGS_FILE="$CLAUDE_HOME/settings.json"
 CLAUDE_JSON_FILE="${CLAUDE_JSON_FILE:-$HOME/.claude.json}"
@@ -60,6 +60,11 @@ backup_file() {
   run cp "$file" "$file.backup.$(date +%Y%m%d_%H%M%S)"
 }
 
+validate_required_inputs() {
+  [[ -n "$CLAUDE_TOKEN_VALUE" ]] || fail "Missing CLAUDE_TOKEN or CLAUDE_CLIENT_TOKEN"
+  [[ -n "$CLAUDE_BASE_URL" ]] || fail "Missing CLAUDE_API_URL"
+}
+
 ensure_bun() {
   [[ "$NO_BUN" == "0" ]] || return 1
   if command_exists bun; then ok "Bun found: $(bun --version)"; return 0; fi
@@ -100,7 +105,7 @@ install_claude() {
 }
 
 write_claude_settings() {
-  [[ -n "$CLAUDE_TOKEN_VALUE" ]] || fail "Missing CLAUDE_TOKEN or CLAUDE_CLIENT_TOKEN"
+  validate_required_inputs
   run mkdir -p "$CLAUDE_HOME"
   backup_file "$SETTINGS_FILE"
   backup_file "$CLAUDE_JSON_FILE"
@@ -181,6 +186,7 @@ main() {
   info "OS: $(uname -s)/$(uname -m)"
   info "API URL: $CLAUDE_BASE_URL"
   [[ -n "$CLAUDE_TOKEN_VALUE" ]] && info "Token: $(mask_secret "$CLAUDE_TOKEN_VALUE")"
+  validate_required_inputs
   step "2/7" "Verify config directories"
   info "Claude home: $CLAUDE_HOME"
   step "3/7" "Install or verify Claude Code CLI"
