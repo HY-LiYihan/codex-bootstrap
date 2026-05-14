@@ -18,6 +18,13 @@ jobs:
           bash -n switch.sh
       - name: Codex dispatcher dry run
         run: AGENT=codex AGENT_TOKEN=test-token AGENT_BASE_URL=https://codex1.sssaicode.com/api/v1 ./install.sh --local . --dry-run --skip-codex-install --skip-shell-rc --yes
+      - name: Codex dispatcher no-extra-args dry run
+        run: |
+          tmp="$(mktemp -d)"
+          mkdir -p "$tmp/agents/codex"
+          printf '#!/usr/bin/env bash\nset -euo pipefail\necho "stub codex installer: $*"\n' > "$tmp/agents/codex/install.sh"
+          chmod +x "$tmp/agents/codex/install.sh"
+          AGENT=codex AGENT_TOKEN=test-token AGENT_BASE_URL=https://codex1.sssaicode.com/api/v1 ./install.sh --local "$tmp"
       - name: Codex safe profile dry run
         run: CODEX_SECURITY_PROFILE=safe AGENT=codex AGENT_TOKEN=test-token AGENT_BASE_URL=https://codex1.sssaicode.com/api/v1 ./install.sh --local . --dry-run --skip-codex-install --skip-shell-rc --yes
       - name: Default agent entrypoint dry run

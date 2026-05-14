@@ -175,9 +175,17 @@ main() {
   [[ -f "$installer" ]] || fail "Installer not found: $installer"
   ok "Selected agent: $normalized"
   if [[ "$normalized" == "codex" ]]; then
-    bash "$installer" --local "$source_dir" "${passthrough[@]}"
+    if ((${#passthrough[@]})); then
+      bash "$installer" --local "$source_dir" "${passthrough[@]}"
+    else
+      bash "$installer" --local "$source_dir"
+    fi
   else
-    bash "$installer" "${passthrough[@]}"
+    if ((${#passthrough[@]})); then
+      bash "$installer" "${passthrough[@]}"
+    else
+      bash "$installer"
+    fi
   fi
 }
 
