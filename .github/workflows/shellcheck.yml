@@ -18,12 +18,16 @@ jobs:
           bash -n switch.sh
       - name: Codex dispatcher dry run
         run: AGENT=codex AGENT_TOKEN=test-token AGENT_BASE_URL=https://codex1.sssaicode.com/api/v1 ./install.sh --local . --dry-run --skip-codex-install --skip-shell-rc --yes
+      - name: Codex safe profile dry run
+        run: CODEX_SECURITY_PROFILE=safe AGENT=codex AGENT_TOKEN=test-token AGENT_BASE_URL=https://codex1.sssaicode.com/api/v1 ./install.sh --local . --dry-run --skip-codex-install --skip-shell-rc --yes
       - name: Default agent entrypoint dry run
         run: AGENT_TOKEN=test-token AGENT_BASE_URL=https://codex1.sssaicode.com/api/v1 AGENT_BOOTSTRAP_LOCAL_SOURCE=. AGENT_BOOTSTRAP_INSTALL_ARGS='--dry-run --skip-codex-install --skip-shell-rc --yes' bash -c '. ./agent'
       - name: Claude Code dispatcher dry run
         run: AGENT=claudecode AGENT_TOKEN=test-token AGENT_BASE_URL=https://node-hk.sssaicode.com/api ./install.sh --local . --dry-run --skip-claude-install
       - name: OpenClaw dispatcher dry run
         run: AGENT=openclaw AGENT_TOKEN=test-token AGENT_BASE_URL=https://node-hk.sssaicode.com/api ./install.sh --local . --dry-run
+      - name: Codex++ dispatcher dry run
+        run: AGENT=codexplusplus ./install.sh --local . --dry-run --skip-setup --provider-sync
       - name: Agent switch dry run
         run: |
           export AGENT_BOOTSTRAP_HOME="$(mktemp -d)"
@@ -60,6 +64,7 @@ jobs:
         run: |
           $env:CODEX_TOKEN = 'test-token'
           $env:CODEX_API_URL = 'https://codex1.sssaicode.com/api/v1'
+          $env:CODEX_SECURITY_PROFILE = 'safe'
           .\agents\codex\install.ps1 -LocalSource . -DryRun -SkipCodexInstall -SkipProfileUpdate
       - name: Claude Code PowerShell dry run
         shell: pwsh
@@ -73,6 +78,9 @@ jobs:
           $env:OPENCLAW_TOKEN = 'test-token'
           $env:OPENCLAW_BASE_URL = 'https://node-hk.sssaicode.com/api'
           .\agents\openclaw\install.ps1 -DryRun
+      - name: Codex++ PowerShell dry run
+        shell: pwsh
+        run: .\agents\codexplusplus\install.ps1 -DryRun -SkipSetup -ProviderSync 1
       - name: Agent switch PowerShell wrapper syntax
         shell: pwsh
         run: |

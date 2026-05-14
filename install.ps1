@@ -21,14 +21,16 @@ Usage:
   `$env:AGENT='codex'; `$env:AGENT_TOKEN='...'; `$env:AGENT_BASE_URL='...'; irm https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/install.ps1 | iex
   `$env:AGENT='claudecode'; `$env:AGENT_TOKEN='...'; `$env:AGENT_BASE_URL='...'; irm https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/install.ps1 | iex
   `$env:AGENT='openclaw'; `$env:AGENT_TOKEN='...'; `$env:AGENT_BASE_URL='...'; irm https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/install.ps1 | iex
+  `$env:AGENT='codexplusplus'; irm https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/install.ps1 | iex
 
 Aliases:
-  codex, claudecode, claude, openclaw
+  codex, claudecode, claude, openclaw, codexplusplus, codex++, cpp
 
 Unified env:
   AGENT_TOKEN      Shared API token for the selected agent
   AGENT_BASE_URL   Shared gateway/base URL for the selected agent
   AGENT_MODEL      Optional model value for agents that support it
+  CODEX_PLUS_PLUS_REF  Optional upstream Codex++ ref/tag (default: v1.0.7)
 "@
 }
 
@@ -42,6 +44,10 @@ function Normalize-Agent {
         "claude-code" { return "claudecode" }
         "openclaw" { return "openclaw" }
         "claw" { return "openclaw" }
+        "codexplusplus" { return "codexplusplus" }
+        "codex-plus-plus" { return "codexplusplus" }
+        "codex++" { return "codexplusplus" }
+        "cpp" { return "codexplusplus" }
         default { Fail "Unknown agent: $Name" }
     }
 }
@@ -82,6 +88,8 @@ function Assert-AgentEnv {
             if (-not $env:OPENCLAW_TOKEN) { Fail "Missing AGENT_TOKEN or OPENCLAW_TOKEN." }
             if ((-not $env:OPENCLAW_BASE_URL) -and (-not $env:OPENCLAW_API_URL)) { Fail "Missing AGENT_BASE_URL, OPENCLAW_BASE_URL, or OPENCLAW_API_URL." }
         }
+        "codexplusplus" {
+        }
     }
 }
 
@@ -106,14 +114,14 @@ function Main {
     Write-Host ""
     Write-Host "+--------------------------------------------------+" -ForegroundColor Cyan
     Write-Host "| Agent Bootstrap                                 |" -ForegroundColor Cyan
-    Write-Host "| codex / claudecode / openclaw                  |" -ForegroundColor Cyan
+    Write-Host "| codex / claudecode / openclaw / codex++        |" -ForegroundColor Cyan
     Write-Host "+--------------------------------------------------+" -ForegroundColor Cyan
     Write-Host ""
 
     if ($Help) { Show-Help; return }
     if (-not $Agent) {
         Show-Help
-        Fail "Missing AGENT. Set `$env:AGENT to codex, claudecode, or openclaw."
+        Fail "Missing AGENT. Set `$env:AGENT to codex, claudecode, openclaw, or codexplusplus."
     }
 
     $normalized = Normalize-Agent $Agent

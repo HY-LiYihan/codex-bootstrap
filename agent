@@ -1,5 +1,6 @@
 # Agent Bootstrap interactive entrypoint.
-# Default: wget https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/agent -O agent && AGENT_TOKEN=YOUR_TOKEN AGENT_BASE_URL=YOUR_BASE_URL . ./agent
+# Wizard:  wget https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/agent -O agent && . ./agent
+# Direct:  wget https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/agent -O agent && AGENT_TOKEN=YOUR_TOKEN AGENT_BASE_URL=YOUR_BASE_URL . ./agent
 # Menu:    wget https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/agent -O agent && . ./agent --menu
 
 agent_bootstrap_main() {
@@ -13,6 +14,21 @@ agent_bootstrap_main() {
   ab_ok() { printf "%b[OK]%b %s\n" "$green" "$nc" "$1"; }
   ab_warn() { printf "%b[WARN]%b %s\n" "$yellow" "$nc" "$1"; }
   ab_error() { printf "%b[ERROR]%b %s\n" "$red" "$nc" "$1"; return 1; }
+  ab_confirm() {
+    prompt="$1"; default="${2:-N}"
+    if [ "$default" = "Y" ]; then
+      printf "%b%s%b [Y/n]: " "$bold" "$prompt" "$nc" > /dev/tty
+    else
+      printf "%b%s%b [y/N]: " "$bold" "$prompt" "$nc" > /dev/tty
+    fi
+    answer=""
+    IFS= read -r answer < /dev/tty || answer=""
+    if [ -z "$answer" ]; then answer="$default"; fi
+    case "$answer" in
+      y|Y|yes|YES|true|TRUE|1) return 0 ;;
+      *) return 1 ;;
+    esac
+  }
   ab_run_installer() {
     run_agent="$1"; run_token="$2"; run_base_url="$3"; run_model="${4:-}"
     install_args="${AGENT_BOOTSTRAP_INSTALL_ARGS:-}"
@@ -23,7 +39,7 @@ agent_bootstrap_main() {
     fi
 
     if [ -n "${AGENT_BOOTSTRAP_LOCAL_SOURCE:-}" ] && [ -f "${AGENT_BOOTSTRAP_LOCAL_SOURCE}/install.sh" ]; then
-      AGENT="$run_agent" AGENT_TOKEN="$run_token" AGENT_BASE_URL="$run_base_url" AGENT_MODEL="$run_model" bash "${AGENT_BOOTSTRAP_LOCAL_SOURCE}/install.sh" "$@"
+      AGENT="$run_agent" AGENT_TOKEN="$run_token" AGENT_BASE_URL="$run_base_url" AGENT_MODEL="$run_model" CODEX_SECURITY_PROFILE="${CODEX_SECURITY_PROFILE:-}" CODEX_PLUS_PLUS_PROVIDER_SYNC="${CODEX_PLUS_PLUS_PROVIDER_SYNC:-}" bash "${AGENT_BOOTSTRAP_LOCAL_SOURCE}/install.sh" "$@"
       return $?
     fi
 
@@ -36,7 +52,7 @@ agent_bootstrap_main() {
       ab_error "curl or wget is required"
       return 1
     fi
-    AGENT="$run_agent" AGENT_TOKEN="$run_token" AGENT_BASE_URL="$run_base_url" AGENT_MODEL="$run_model" bash "$tmp_file" "$@"
+    AGENT="$run_agent" AGENT_TOKEN="$run_token" AGENT_BASE_URL="$run_base_url" AGENT_MODEL="$run_model" CODEX_SECURITY_PROFILE="${CODEX_SECURITY_PROFILE:-}" CODEX_PLUS_PLUS_PROVIDER_SYNC="${CODEX_PLUS_PLUS_PROVIDER_SYNC:-}" bash "$tmp_file" "$@"
   }
   ab_read() {
     prompt="$1"; var_name="$2"; default_value="${3:-}"
@@ -64,6 +80,48 @@ agent_bootstrap_main() {
       return 1
     fi
   }
+  agent_bootstrap_wizard() {
+    printf "\n%b+--------------------------------------------------+%b\n" "$cyan" "$nc"
+    printf "%b|%b %bAgent Bootstrap Wizard%b                         %b|%b\n" "$cyan" "$nc" "$bold" "$nc" "$cyan" "$nc"
+    printf "%b|%b macOS-first one-command setup                   %b|%b\n" "$cyan" "$nc" "$cyan" "$nc"
+    printf "%b+--------------------------------------------------+%b\n\n" "$cyan" "$nc"
+
+    ab_read "API token" token "${AGENT_TOKEN:-${CODEX_TOKEN:-}}"
+    ab_info "Common Codex option: https://codex1.sssaicode.com/api/v1"
+    ab_read "Codex API base URL" base_url "${AGENT_BASE_URL:-${CODEX_API_URL:-}}"
+    ab_require_pair "$token" "$base_url" || return 1
+
+    printf "\nChoose Codex security profile:\n"
+    printf "  1) Maximum autonomy: approval_policy=never + danger-full-access\n"
+    printf "  2) Official safe defaults\n"
+    ab_read "Select" choice "1"
+    case "$choice" in
+      1|max|full|full-auto|danger) codex_security_profile="max" ;;
+      2|safe|official|default) codex_security_profile="safe" ;;
+      *) ab_error "Unknown choice: $choice" || return 1 ;;
+    esac
+
+    ab_info "Installing Codex with profile: $codex_security_profile"
+    CODEX_SECURITY_PROFILE="$codex_security_profile" ab_run_installer "codex" "$token" "$base_url" || return 1
+
+    if ab_confirm "Install Codex++ addon?" "Y"; then
+      codexpp_args=""
+      if ab_confirm "Enable Codex++ provider sync?" "Y"; then
+        codexpp_args="--provider-sync"
+      fi
+      if ab_confirm "Launch Codex++ now?" "N"; then
+        codexpp_args="$codexpp_args --launch"
+      fi
+      AGENT_BOOTSTRAP_INSTALL_ARGS="$codexpp_args" ab_run_installer "codexplusplus" "" "" || return 1
+    fi
+
+    ab_ok "Wizard completed"
+  }
+
+  if [ "${1:-}" = "--wizard" ] || [ "${AGENT_BOOTSTRAP_WIZARD:-0}" = "1" ]; then
+    agent_bootstrap_wizard
+    return $?
+  fi
 
   if [ "${1:-}" = "--menu" ] || [ "${AGENT_BOOTSTRAP_MENU:-0}" = "1" ]; then
     agent_bootstrap_menu "$@"
@@ -73,14 +131,14 @@ agent_bootstrap_main() {
   token="${AGENT_TOKEN:-${CODEX_TOKEN:-}}"
   base_url="${AGENT_BASE_URL:-${CODEX_API_URL:-}}"
   if [ -z "$token" ] || [ -z "$base_url" ]; then
-    ab_error "Missing AGENT_TOKEN or AGENT_BASE_URL. Example: AGENT_TOKEN=YOUR_TOKEN AGENT_BASE_URL=YOUR_BASE_URL . ./agent"
-    ab_info "For interactive setup, run: . ./agent --menu"
-    return 1
+    ab_info "No token/base URL provided; starting interactive wizard."
+    agent_bootstrap_wizard
+    return $?
   fi
 
   printf "\n%b+--------------------------------------------------+%b\n" "$cyan" "$nc"
   printf "%b|%b %bAgent Bootstrap Default%b                         %b|%b\n" "$cyan" "$nc" "$bold" "$nc" "$cyan" "$nc"
-  printf "%b|%b Codex full-auto ready                         %b|%b\n" "$cyan" "$nc" "$cyan" "$nc"
+  printf "%b|%b Codex ready                                  %b|%b\n" "$cyan" "$nc" "$cyan" "$nc"
   printf "%b+--------------------------------------------------+%b\n\n" "$cyan" "$nc"
   ab_info "Agent: codex"
   ab_info "Base URL: $base_url"
@@ -98,7 +156,8 @@ Choose an install target:
   1) Codex full-auto
   2) Claude Code
   3) OpenClaw
-  4) All three agents with the same token/base URL
+  4) Codex++ App addon
+  5) All three agents with the same token/base URL
   q) Quit
 MENU
 
@@ -107,7 +166,8 @@ MENU
     1|codex|Codex) agent="codex" ;;
     2|claude|claudecode|Claude) agent="claudecode" ;;
     3|openclaw|claw|OpenClaw) agent="openclaw" ;;
-    4|all|All) agent="all" ;;
+    4|codexplusplus|codex++|cpp|Codex++) agent="codexplusplus" ;;
+    5|all|All) agent="all" ;;
     q|Q|quit|Quit) ab_warn "Cancelled"; return 0 ;;
     *) ab_error "Unknown choice: $choice" || return 1 ;;
   esac
@@ -118,7 +178,16 @@ MENU
       ab_info "Common Codex option: https://codex1.sssaicode.com/api/v1"
       ab_read "Codex API base URL" base_url "${AGENT_BASE_URL:-${CODEX_API_URL:-}}"
       ab_require_pair "$token" "$base_url" || return 1
-      ab_run_installer "codex" "$token" "$base_url"
+      printf "\nChoose Codex security profile:\n"
+      printf "  1) Maximum autonomy: approval_policy=never + danger-full-access\n"
+      printf "  2) Official safe defaults\n"
+      ab_read "Select" choice "1"
+      case "$choice" in
+        1|max|full|full-auto|danger) codex_security_profile="max" ;;
+        2|safe|official|default) codex_security_profile="safe" ;;
+        *) ab_error "Unknown choice: $choice" || return 1 ;;
+      esac
+      CODEX_SECURITY_PROFILE="$codex_security_profile" ab_run_installer "codex" "$token" "$base_url"
       ;;
     claudecode)
       ab_read "API token" token "${AGENT_TOKEN:-${CLAUDE_TOKEN:-${CLAUDE_CLIENT_TOKEN:-}}}"
@@ -134,6 +203,18 @@ MENU
       ab_read "OpenClaw model" model "${AGENT_MODEL:-${OPENCLAW_MODEL:-anthropic/claude-opus-4-7}}"
       ab_require_pair "$token" "$base_url" || return 1
       ab_run_installer "openclaw" "$token" "$base_url" "$model"
+      ;;
+    codexplusplus)
+      ab_info "Codex++ is an optional Codex App enhancer. It does not need an API token or base URL."
+      ab_info "Default upstream: BigPizzaV3/CodexPlusPlus@${CODEX_PLUS_PLUS_REF:-v1.0.7}"
+      codexpp_args=""
+      if ab_confirm "Enable Codex++ provider sync?" "Y"; then
+        codexpp_args="--provider-sync"
+      fi
+      if ab_confirm "Launch Codex++ now?" "N"; then
+        codexpp_args="$codexpp_args --launch"
+      fi
+      AGENT_BOOTSTRAP_INSTALL_ARGS="$codexpp_args" ab_run_installer "codexplusplus" "" ""
       ;;
     all)
       ab_read "Shared API token" token "${AGENT_TOKEN:-}"

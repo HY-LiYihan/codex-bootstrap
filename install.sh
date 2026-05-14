@@ -30,9 +30,10 @@ Usage:
   AGENT=codex AGENT_TOKEN=... AGENT_BASE_URL=... bash -c "\$(curl -fsSL https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/install.sh)"
   AGENT=claudecode AGENT_TOKEN=... AGENT_BASE_URL=... bash -c "\$(curl -fsSL https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/install.sh)"
   AGENT=openclaw AGENT_TOKEN=... AGENT_BASE_URL=... bash -c "\$(curl -fsSL https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/install.sh)"
+  AGENT=codexplusplus bash -c "\$(curl -fsSL https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/install.sh)"
 
 Aliases:
-  codex, claudecode, claude, openclaw
+  codex, claudecode, claude, openclaw, codexplusplus, codex++, cpp
 
 You can also pass the agent as the first argument:
   bash -c "\$(curl -fsSL .../install.sh)" -- codex
@@ -41,6 +42,7 @@ Unified env:
   AGENT_TOKEN      Shared API token for the selected agent
   AGENT_BASE_URL   Shared gateway/base URL for the selected agent
   AGENT_MODEL      Optional model value for agents that support it
+  CODEX_PLUS_PLUS_REF  Optional upstream Codex++ ref/tag (default: v1.0.7)
 USAGE
 }
 
@@ -49,6 +51,7 @@ normalize_agent() {
     codex|openai-codex) printf "codex" ;;
     claude|claudecode|claude-code) printf "claudecode" ;;
     openclaw|claw) printf "openclaw" ;;
+    codexplusplus|codex-plus-plus|codex++|cpp) printf "codexplusplus" ;;
     *) return 1 ;;
   esac
 }
@@ -90,6 +93,8 @@ validate_agent_env() {
       [[ -n "${OPENCLAW_TOKEN:-}" ]] || fail "Missing AGENT_TOKEN or OPENCLAW_TOKEN."
       [[ -n "${OPENCLAW_BASE_URL:-${OPENCLAW_API_URL:-}}" ]] || fail "Missing AGENT_BASE_URL, OPENCLAW_BASE_URL, or OPENCLAW_API_URL."
       ;;
+    codexplusplus)
+      ;;
   esac
 }
 
@@ -117,13 +122,13 @@ download_source() {
 main() {
   printf "\n%b+--------------------------------------------------+%b\n" "$CYAN" "$NC"
   printf "%b|%b %bAgent Bootstrap%b                                 %b|%b\n" "$CYAN" "$NC" "$BOLD" "$NC" "$CYAN" "$NC"
-  printf "%b|%b codex / claudecode / openclaw                 %b|%b\n" "$CYAN" "$NC" "$CYAN" "$NC"
+  printf "%b|%b codex / claudecode / openclaw / codex++       %b|%b\n" "$CYAN" "$NC" "$CYAN" "$NC"
   printf "%b+--------------------------------------------------+%b\n\n" "$CYAN" "$NC"
 
   local passthrough=()
   if [[ -z "$AGENT" && $# -gt 0 ]]; then
     case "${1:-}" in
-      codex|openai-codex|claude|claudecode|claude-code|openclaw|claw)
+      codex|openai-codex|claude|claudecode|claude-code|openclaw|claw|codexplusplus|codex-plus-plus|codex++|cpp)
         AGENT="$1"
         shift
         ;;
@@ -142,7 +147,7 @@ main() {
       *)
         if [[ -z "$AGENT" ]]; then
           case "$1" in
-            codex|openai-codex|claude|claudecode|claude-code|openclaw|claw)
+            codex|openai-codex|claude|claudecode|claude-code|openclaw|claw|codexplusplus|codex-plus-plus|codex++|cpp)
               AGENT="$1"
               shift
               continue
@@ -157,7 +162,7 @@ main() {
 
   if [[ -z "$AGENT" ]]; then
     usage
-    fail "Missing AGENT. Set AGENT=codex, AGENT=claudecode, or AGENT=openclaw."
+    fail "Missing AGENT. Set AGENT=codex, AGENT=claudecode, AGENT=openclaw, or AGENT=codexplusplus."
   fi
 
   local normalized source_dir installer

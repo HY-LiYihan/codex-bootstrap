@@ -17,6 +17,7 @@ PROVIDER_ID="${CODEX_PROVIDER_ID:-custom}"
 PROVIDER_ENV_KEY="${CODEX_PROVIDER_ENV_KEY:-CODEX_API_KEY}"
 MODEL="${CODEX_MODEL:-gpt-5.5}"
 REASONING_EFFORT="${CODEX_REASONING_EFFORT:-high}"
+SECURITY_PROFILE="${CODEX_SECURITY_PROFILE:-max}"
 PROJECT_DIR="${CODEX_PROJECT_DIR:-$PWD}"
 NPM_REGISTRY="${CODEX_NPM_REGISTRY:-https://registry.npmmirror.com}"
 LOCAL_SOURCE=""
@@ -83,6 +84,7 @@ Environment:
   CODEX_PROVIDER_ENV_KEY              Provider env key (default: ${PROVIDER_ENV_KEY})
   CODEX_MODEL                         Default model (default: ${MODEL})
   CODEX_REASONING_EFFORT              Reasoning effort (default: ${REASONING_EFFORT})
+  CODEX_SECURITY_PROFILE              max or safe (default: ${SECURITY_PROFILE})
   CODEX_NPM_REGISTRY                  npm fallback registry (default: ${NPM_REGISTRY})
   CODEX_PROFILE                       Profile name (default: default)
 USAGE
@@ -114,6 +116,11 @@ validate_env_key() {
 validate_required_inputs() {
   [[ -n "$API_KEY" ]] || fail "Missing CODEX_TOKEN or OPENAI_API_KEY"
   [[ -n "$API_BASE_URL" ]] || fail "Missing CODEX_API_URL or OPENAI_BASE_URL"
+  case "$SECURITY_PROFILE" in
+    max|full|full-auto|danger) SECURITY_PROFILE="max" ;;
+    safe|official|default) SECURITY_PROFILE="safe" ;;
+    *) fail "Invalid CODEX_SECURITY_PROFILE: $SECURITY_PROFILE. Use max or safe." ;;
+  esac
 }
 
 detect_platform() {
@@ -210,6 +217,7 @@ load_profile() {
     source "$profile_file"
     MODEL="${CODEX_MODEL:-$MODEL}"
     REASONING_EFFORT="${CODEX_REASONING_EFFORT:-$REASONING_EFFORT}"
+    SECURITY_PROFILE="${CODEX_SECURITY_PROFILE:-$SECURITY_PROFILE}"
     log_ok "Loaded profile: $BOOTSTRAP_PROFILE"
   else
     log_warn "Profile not found: $BOOTSTRAP_PROFILE; using built-in defaults"
@@ -324,11 +332,12 @@ write_config() {
   url_escaped="$(toml_escape "$API_BASE_URL")"
   project_escaped="$(toml_escape "$PROJECT_DIR")"
   if [[ "$DRY_RUN" == "1" ]]; then
-    printf "DRY-RUN: write %s with model_provider=%s base_url=%s env_key=%s\n" "$CONFIG_FILE" "$PROVIDER_ID" "$API_BASE_URL" "$PROVIDER_ENV_KEY"
+    printf "DRY-RUN: write %s with model_provider=%s base_url=%s env_key=%s security_profile=%s\n" "$CONFIG_FILE" "$PROVIDER_ID" "$API_BASE_URL" "$PROVIDER_ENV_KEY" "$SECURITY_PROFILE"
     return 0
   fi
 
-  cat > "$CONFIG_FILE" <<TOML
+  if [[ "$SECURITY_PROFILE" == "max" ]]; then
+    cat > "$CONFIG_FILE" <<TOML
 # Managed by agent-bootstrap.
 # This intentionally uses a custom provider, matching the simple gateway-oriented Codex setup.
 model = "$model_escaped"
@@ -351,6 +360,23 @@ enabled = true
 [projects."$project_escaped"]
 trust_level = "trusted"
 TOML
+  else
+    cat > "$CONFIG_FILE" <<TOML
+# Managed by agent-bootstrap.
+# Safe profile: leaves high-permission controls at Codex defaults.
+model = "$model_escaped"
+model_reasoning_effort = "$effort_escaped"
+preferred_auth_method = "apikey"
+disable_response_storage = true
+model_provider = "$provider_escaped"
+
+[model_providers."$provider_escaped"]
+name = "$provider_escaped"
+base_url = "$url_escaped"
+wire_api = "responses"
+env_key = "$env_key_escaped"
+TOML
+  fi
 }
 
 install_rules_and_templates() {
@@ -410,6 +436,7 @@ main() {
   log_info "Provider env key: $PROVIDER_ENV_KEY"
   log_info "Model: $MODEL"
   log_info "Reasoning effort: $REASONING_EFFORT"
+  log_info "Security profile: $SECURITY_PROFILE"
   log_info "Base URL: $API_BASE_URL"
   [[ -n "$API_KEY" ]] && log_info "API key: $(mask_secret "$API_KEY")"
 

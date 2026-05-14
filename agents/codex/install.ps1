@@ -8,6 +8,7 @@ param(
     [string]$ProviderEnvKey = $(if ($env:CODEX_PROVIDER_ENV_KEY) { $env:CODEX_PROVIDER_ENV_KEY } else { "CODEX_API_KEY" }),
     [string]$Model = $(if ($env:CODEX_MODEL) { $env:CODEX_MODEL } else { "gpt-5.5" }),
     [string]$ReasoningEffort = $(if ($env:CODEX_REASONING_EFFORT) { $env:CODEX_REASONING_EFFORT } else { "high" }),
+    [string]$SecurityProfile = $(if ($env:CODEX_SECURITY_PROFILE) { $env:CODEX_SECURITY_PROFILE } else { "max" }),
     [string]$NpmRegistry = $(if ($env:CODEX_NPM_REGISTRY) { $env:CODEX_NPM_REGISTRY } else { "https://registry.npmmirror.com" }),
     [string]$BootstrapRepo = $(if ($env:BOOTSTRAP_REPO) { $env:BOOTSTRAP_REPO } else { "HY-LiYihan/agent-bootstrap" }),
     [string]$BootstrapRef = $(if ($env:BOOTSTRAP_REF) { $env:BOOTSTRAP_REF } else { "main" }),
@@ -59,6 +60,7 @@ Environment:
   CODEX_PROVIDER_ENV_KEY              Provider env key (default: CODEX_API_KEY)
   CODEX_MODEL                         Default model (default: gpt-5.5)
   CODEX_REASONING_EFFORT              Reasoning effort (default: high)
+  CODEX_SECURITY_PROFILE              max or safe (default: max)
   CODEX_NPM_REGISTRY                  npm fallback registry (default: https://registry.npmmirror.com)
   BOOTSTRAP_REF                       Git branch/tag for templates (default: main)
 "@
@@ -99,6 +101,11 @@ function Assert-EnvKey {
 function Assert-RequiredInputs {
     if (-not $Token) { Fail "Missing CODEX_TOKEN or OPENAI_API_KEY" }
     if (-not $BaseUrl) { Fail "Missing CODEX_API_URL or OPENAI_BASE_URL" }
+    switch ($SecurityProfile.ToLowerInvariant()) {
+        { $_ -in @("max", "full", "full-auto", "danger") } { $script:SecurityProfile = "max"; break }
+        { $_ -in @("safe", "official", "default") } { $script:SecurityProfile = "safe"; break }
+        default { Fail "Invalid CODEX_SECURITY_PROFILE: $SecurityProfile. Use max or safe." }
+    }
 }
 
 function Get-SourceDir {
@@ -217,7 +224,8 @@ function Write-CodexConfig {
     $url = Escape-TomlString $BaseUrl
     $project = Escape-TomlString $ProjectDir
 
-    $config = @"
+    if ($SecurityProfile -eq "max") {
+        $config = @"
 # Managed by agent-bootstrap.
 # This intentionally uses a custom provider, matching the simple gateway-oriented Codex setup.
 model = "$modelEscaped"
@@ -241,6 +249,24 @@ enabled = true
 [projects."$project"]
 trust_level = "trusted"
 "@
+    } else {
+        $config = @"
+# Managed by agent-bootstrap.
+# Safe profile: leaves high-permission controls at Codex defaults.
+model = "$modelEscaped"
+model_reasoning_effort = "$effort"
+preferred_auth_method = "apikey"
+disable_response_storage = true
+model_provider = "$provider"
+windows_wsl_setup_acknowledged = true
+
+[model_providers."$provider"]
+name = "$provider"
+base_url = "$url"
+wire_api = "responses"
+env_key = "$envKey"
+"@
+    }
     Invoke-Run "write $ConfigFile" { [System.IO.File]::WriteAllText($ConfigFile, $config, [System.Text.UTF8Encoding]::new($false)) }
     Write-Ok "Config file ready: $ConfigFile"
 }
@@ -295,6 +321,7 @@ function Main {
     Write-Info "Provider env key: $ProviderEnvKey"
     Write-Info "Model: $Model"
     Write-Info "Reasoning effort: $ReasoningEffort"
+    Write-Info "Security profile: $SecurityProfile"
     Write-Info "npm fallback registry: $NpmRegistry"
     Write-Info "Base URL: $BaseUrl"
     if ($Token) { Write-Info "API key: $(Mask-Secret $Token)" }

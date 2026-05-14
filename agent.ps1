@@ -61,7 +61,7 @@ if (-not $useMenu) {
         Write-Host '[INFO] For interactive setup: $env:AGENT_BOOTSTRAP_MENU=''1''; irm https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/agent.ps1 | iex' -ForegroundColor Cyan
         exit 1
     }
-    Show-Banner 'Agent Bootstrap Default' 'Codex full-auto ready'
+    Show-Banner 'Agent Bootstrap Default' 'Codex ready'
     Write-Host "[INFO] Agent: codex" -ForegroundColor Cyan
     Write-Host "[INFO] Base URL: $baseUrl" -ForegroundColor Cyan
     Invoke-AgentInstaller -Agent 'codex' -Token $token -BaseUrl $baseUrl
@@ -70,10 +70,11 @@ if (-not $useMenu) {
 
 Show-Banner 'Agent Bootstrap Interactive' 'one menu -> one ready agent'
 Write-Host 'Choose an install target:'
-Write-Host '  1) Codex full-auto'
+Write-Host '  1) Codex'
 Write-Host '  2) Claude Code'
 Write-Host '  3) OpenClaw'
-Write-Host '  4) All three agents with the same token/base URL'
+Write-Host '  4) Codex++ App addon'
+Write-Host '  5) All three agents with the same token/base URL'
 Write-Host '  q) Quit'
 
 $choice = Ask-Value 'Select' '1'
@@ -81,7 +82,8 @@ switch ($choice.ToLowerInvariant()) {
     { $_ -in @('1', 'codex') } { $agent = 'codex'; break }
     { $_ -in @('2', 'claude', 'claudecode', 'claude-code') } { $agent = 'claudecode'; break }
     { $_ -in @('3', 'openclaw', 'claw') } { $agent = 'openclaw'; break }
-    { $_ -in @('4', 'all') } { $agent = 'all'; break }
+    { $_ -in @('4', 'codexplusplus', 'codex++', 'cpp') } { $agent = 'codexplusplus'; break }
+    { $_ -in @('5', 'all') } { $agent = 'all'; break }
     { $_ -in @('q', 'quit') } { Write-Host '[WARN] Cancelled' -ForegroundColor Yellow; return }
     default { throw "Unknown choice: $choice" }
 }
@@ -105,6 +107,11 @@ if ($agent -eq 'codex') {
     $model = Ask-Value 'OpenClaw model' $(if ($env:AGENT_MODEL) { $env:AGENT_MODEL } elseif ($env:OPENCLAW_MODEL) { $env:OPENCLAW_MODEL } else { 'anthropic/claude-opus-4-7' })
     Assert-TokenAndBaseUrl -Token $token -BaseUrl $baseUrl
     Invoke-AgentInstaller -Agent 'openclaw' -Token $token -BaseUrl $baseUrl -Model $model
+} elseif ($agent -eq 'codexplusplus') {
+    Write-Host '[INFO] Codex++ is an optional Codex App enhancer. It does not need an API token or base URL.' -ForegroundColor Cyan
+    $ref = if ($env:CODEX_PLUS_PLUS_REF) { $env:CODEX_PLUS_PLUS_REF } else { 'v1.0.7' }
+    Write-Host "[INFO] Default upstream: BigPizzaV3/CodexPlusPlus@$ref" -ForegroundColor Cyan
+    Invoke-AgentInstaller -Agent 'codexplusplus' -Token '' -BaseUrl ''
 } else {
     $sharedToken = Ask-Value 'Shared API token' $(if ($env:AGENT_TOKEN) { $env:AGENT_TOKEN } else { '' })
     Write-Host '[INFO] Common non-Codex option: https://node-hk.sssaicode.com/api' -ForegroundColor Cyan
