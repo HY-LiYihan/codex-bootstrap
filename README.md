@@ -21,7 +21,15 @@ Aliases:
 
 ## Quick Start
 
-There are three entry styles:
+Recommended stable Codex-only install:
+
+```bash
+CODEX_TOKEN="YOUR_TOKEN" CODEX_API_URL="YOUR_BASE_URL" bash -c "$(curl -fsSL https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/install-codex.sh)"
+```
+
+This path intentionally does one thing: install or verify Codex CLI, write a `custom` provider config, store the token in `~/.codex/private.env`, and sync older Codex session metadata to the active provider name.
+
+There are also three broader entry styles:
 
 1. macOS/Linux wizard: one command, then enter `base_url` and `key`, choose high-autonomy or safe Codex config, and optionally install Codex++.
 2. Direct install: pass env values up front for non-interactive setup.
@@ -83,7 +91,7 @@ Windows PowerShell:
 $env:AGENT_BOOTSTRAP_MENU='1'; irm https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/agent.ps1 | iex
 ```
 
-The default non-interactive mode writes the high-autonomy Codex config, but it does not provide a built-in key or base URL. The wizard and menu show common URL options as hints and still ask you to enter the value.
+The default non-interactive mode writes the high-autonomy Codex config, but it does not provide a built-in key or base URL. The wizard and menu require you to enter those values explicitly.
 
 Online editable examples:
 
@@ -174,6 +182,14 @@ wire_api = "responses"
 env_key = "CODEX_API_KEY"
 ```
 
+Codex provider history sync:
+
+- Reads the active `model_provider` from `~/.codex/config.toml`.
+- Updates only the first `session_meta` line in `~/.codex/sessions/**/rollout-*.jsonl` and `~/.codex/archived_sessions/**/rollout-*.jsonl`.
+- Updates `threads.model_provider` in `~/.codex/state_5.sqlite` when SQLite is available and unlocked.
+- Creates backups under `~/.codex/backups_state/provider-sync/YYYYMMDDHHMMSS`.
+- Skips SQLite with a warning if the database is locked, so install still completes.
+
 Codex, safe profile:
 
 ```toml
@@ -215,9 +231,9 @@ Codex++:
 macOS/Linux:
 
 ```bash
-AGENT=codex AGENT_TOKEN=test-token AGENT_BASE_URL=https://codex1.sssaicode.com/api/v1 AGENT_BOOTSTRAP_LOCAL_SOURCE=. ./install.sh --dry-run --skip-codex-install --skip-shell-rc --yes
-AGENT=claudecode AGENT_TOKEN=test-token AGENT_BASE_URL=https://node-hk.sssaicode.com/api AGENT_BOOTSTRAP_LOCAL_SOURCE=. ./install.sh --dry-run --skip-claude-install
-AGENT=openclaw AGENT_TOKEN=test-token AGENT_BASE_URL=https://node-hk.sssaicode.com/api AGENT_BOOTSTRAP_LOCAL_SOURCE=. ./install.sh --dry-run
+AGENT=codex AGENT_TOKEN=test-token AGENT_BASE_URL=https://example.test/v1 AGENT_BOOTSTRAP_LOCAL_SOURCE=. ./install.sh --dry-run --skip-codex-install --skip-shell-rc --yes
+AGENT=claudecode AGENT_TOKEN=test-token AGENT_BASE_URL=https://example.test/api AGENT_BOOTSTRAP_LOCAL_SOURCE=. ./install.sh --dry-run --skip-claude-install
+AGENT=openclaw AGENT_TOKEN=test-token AGENT_BASE_URL=https://example.test/api AGENT_BOOTSTRAP_LOCAL_SOURCE=. ./install.sh --dry-run
 AGENT=codexplusplus AGENT_BOOTSTRAP_LOCAL_SOURCE=. ./install.sh --dry-run --skip-setup --provider-sync
 ```
 
@@ -239,8 +255,8 @@ Add a profile:
 ```bash
 node switch.js add sss \
   --token YOUR_TOKEN \
-  --base-url https://node-hk.sssaicode.com/api \
-  --codex-url https://codex1.sssaicode.com/api/v1 \
+  --base-url https://example.test/api \
+  --codex-url https://example.test/v1 \
   --openclaw-model anthropic/claude-opus-4-7
 ```
 
@@ -261,7 +277,7 @@ Fixed curl entrypoints:
 macOS/Linux:
 
 ```bash
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/switch.sh)" -- add sss --token YOUR_TOKEN --base-url https://node-hk.sssaicode.com/api
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/switch.sh)" -- add sss --token YOUR_TOKEN --base-url https://example.test/api
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/switch.sh)" -- use sss
 ```
 
@@ -270,7 +286,7 @@ Windows PowerShell:
 ```powershell
 $tmp = Join-Path $env:TEMP 'agent-switch.ps1'
 Invoke-WebRequest -Uri https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/switch.ps1 -OutFile $tmp
-& $tmp add sss --token YOUR_TOKEN --base-url https://node-hk.sssaicode.com/api
+& $tmp add sss --token YOUR_TOKEN --base-url https://example.test/api
 & $tmp use sss
 ```
 

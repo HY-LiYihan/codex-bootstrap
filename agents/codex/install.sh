@@ -27,6 +27,7 @@ FORCE=0
 SKIP_CODEX_INSTALL=0
 SKIP_SHELL_RC=0
 INSTALL_BUN=1
+SYNC_PROVIDER_HISTORY="${CODEX_SYNC_PROVIDER_HISTORY:-1}"
 OS_ID=""
 OS_NAME=""
 ARCH_NAME=""
@@ -74,6 +75,8 @@ Options:
   --force              Allow reinstalling Codex and overwriting managed files
   --skip-codex-install Do not install or update @openai/codex
   --skip-shell-rc      Do not add source line to shell startup file
+  --sync-provider-history     Sync old Codex sessions to the selected model_provider (default)
+  --no-sync-provider-history  Skip provider history sync
   --no-bun             Do not install Bun automatically; use npm if available
   -h, --help           Show this help
 
@@ -85,6 +88,7 @@ Environment:
   CODEX_MODEL                         Default model (default: ${MODEL})
   CODEX_REASONING_EFFORT              Reasoning effort (default: ${REASONING_EFFORT})
   CODEX_SECURITY_PROFILE              max or safe (default: ${SECURITY_PROFILE})
+  CODEX_SYNC_PROVIDER_HISTORY         1 or 0 (default: ${SYNC_PROVIDER_HISTORY})
   CODEX_NPM_REGISTRY                  npm fallback registry (default: ${NPM_REGISTRY})
   CODEX_PROFILE                       Profile name (default: default)
 USAGE
@@ -102,6 +106,8 @@ while [[ $# -gt 0 ]]; do
     --force) FORCE=1; shift ;;
     --skip-codex-install) SKIP_CODEX_INSTALL=1; shift ;;
     --skip-shell-rc) SKIP_SHELL_RC=1; shift ;;
+    --sync-provider-history) SYNC_PROVIDER_HISTORY=1; shift ;;
+    --no-sync-provider-history) SYNC_PROVIDER_HISTORY=0; shift ;;
     --no-bun) INSTALL_BUN=0; shift ;;
     -h|--help) usage; exit 0 ;;
     *) fail "Unknown option: $1" ;;
@@ -120,6 +126,11 @@ validate_required_inputs() {
     max|full|full-auto|danger) SECURITY_PROFILE="max" ;;
     safe|official|default) SECURITY_PROFILE="safe" ;;
     *) fail "Invalid CODEX_SECURITY_PROFILE: $SECURITY_PROFILE. Use max or safe." ;;
+  esac
+  case "$SYNC_PROVIDER_HISTORY" in
+    1|true|yes|on) SYNC_PROVIDER_HISTORY=1 ;;
+    0|false|no|off) SYNC_PROVIDER_HISTORY=0 ;;
+    *) fail "Invalid CODEX_SYNC_PROVIDER_HISTORY: $SYNC_PROVIDER_HISTORY. Use 1 or 0." ;;
   esac
 }
 
@@ -206,6 +217,15 @@ mask_secret() {
     printf "<hidden>"
   else
     printf "%s...%s" "${value:0:4}" "${value: -4}"
+  fi
+}
+
+mask_url() {
+  local value="$1"
+  if [[ -z "$value" ]]; then
+    printf "<missing>"
+  else
+    printf "<configured>"
   fi
 }
 
@@ -324,15 +344,14 @@ write_config() {
   log_step "5/7" "Write Codex custom provider config"
   run mkdir -p "$CODEX_HOME"
   backup_file "$CONFIG_FILE"
-  local provider_escaped env_key_escaped model_escaped effort_escaped url_escaped project_escaped
+  local provider_escaped env_key_escaped model_escaped effort_escaped url_escaped
   provider_escaped="$(toml_escape "$PROVIDER_ID")"
   env_key_escaped="$(toml_escape "$PROVIDER_ENV_KEY")"
   model_escaped="$(toml_escape "$MODEL")"
   effort_escaped="$(toml_escape "$REASONING_EFFORT")"
   url_escaped="$(toml_escape "$API_BASE_URL")"
-  project_escaped="$(toml_escape "$PROJECT_DIR")"
   if [[ "$DRY_RUN" == "1" ]]; then
-    printf "DRY-RUN: write %s with model_provider=%s base_url=%s env_key=%s security_profile=%s\n" "$CONFIG_FILE" "$PROVIDER_ID" "$API_BASE_URL" "$PROVIDER_ENV_KEY" "$SECURITY_PROFILE"
+    printf "DRY-RUN: write %s with model_provider=%s base_url=%s env_key=%s security_profile=%s\n" "$CONFIG_FILE" "$PROVIDER_ID" "$(mask_url "$API_BASE_URL")" "$PROVIDER_ENV_KEY" "$SECURITY_PROFILE"
     return 0
   fi
 
@@ -353,12 +372,6 @@ name = "$provider_escaped"
 base_url = "$url_escaped"
 wire_api = "responses"
 env_key = "$env_key_escaped"
-
-[plugins."browser-use@openai-bundled"]
-enabled = true
-
-[projects."$project_escaped"]
-trust_level = "trusted"
 TOML
   else
     cat > "$CONFIG_FILE" <<TOML
@@ -379,13 +392,35 @@ TOML
   fi
 }
 
+sync_provider_history() {
+  local source_dir="$1"
+  [[ "$SYNC_PROVIDER_HISTORY" == "1" ]] || return 0
+  log_step "6/7" "Sync Codex provider history"
+
+  local sync_script="$source_dir/shared/codex-provider-sync.js"
+  if [[ ! -f "$sync_script" ]]; then
+    log_warn "Provider sync script not found; skipped"
+    return 0
+  fi
+  if ! command_exists node; then
+    log_warn "Node.js not found; skipped provider history sync"
+    return 0
+  fi
+
+  if [[ "$DRY_RUN" == "1" ]]; then
+    node "$sync_script" --codex-home "$CODEX_HOME" --provider "$PROVIDER_ID" --dry-run || log_warn "Provider history sync dry-run skipped"
+  else
+    node "$sync_script" --codex-home "$CODEX_HOME" --provider "$PROVIDER_ID" || log_warn "Provider history sync skipped"
+  fi
+}
+
 install_rules_and_templates() {
   local source_dir="$1"
   local rules_src="$source_dir/templates/default.rules"
   local agents_src="$source_dir/templates/AGENTS.md"
 
   if [[ -f "$rules_src" ]]; then
-    log_step "6/7" "Install rules and project instructions"
+    log_step "7/7" "Install rules and shell integration"
     run mkdir -p "$CODEX_HOME/rules"
     backup_file "$CODEX_HOME/rules/default.rules"
     run cp "$rules_src" "$CODEX_HOME/rules/default.rules"
@@ -408,7 +443,7 @@ setup_shell_rc() {
   local shell_rc
   shell_rc="$(detect_shell_rc)"
   local source_line="[ -f \"$PRIVATE_ENV_FILE\" ] && source \"$PRIVATE_ENV_FILE\""
-  log_step "7/7" "Ensure shell loads private env"
+  log_info "Ensuring shell loads private env"
   if [[ "$DRY_RUN" == "1" ]]; then
     printf "DRY-RUN: ensure source line exists in %s\n" "$shell_rc"
     return 0
@@ -437,7 +472,8 @@ main() {
   log_info "Model: $MODEL"
   log_info "Reasoning effort: $REASONING_EFFORT"
   log_info "Security profile: $SECURITY_PROFILE"
-  log_info "Base URL: $API_BASE_URL"
+  log_info "Provider history sync: $SYNC_PROVIDER_HISTORY"
+  log_info "Base URL: $(mask_url "$API_BASE_URL")"
   [[ -n "$API_KEY" ]] && log_info "API key: $(mask_secret "$API_KEY")"
 
   local source_dir
@@ -448,6 +484,7 @@ main() {
   install_codex
   write_private_env
   write_config
+  sync_provider_history "$source_dir"
   install_rules_and_templates "$source_dir"
   setup_shell_rc
 

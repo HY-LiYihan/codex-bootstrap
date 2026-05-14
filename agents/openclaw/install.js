@@ -57,7 +57,7 @@ function main() {
   if (!token) fail('Missing OPENCLAW_TOKEN');
   if (!baseUrl) fail('Missing OPENCLAW_BASE_URL or OPENCLAW_API_URL');
   log('INFO', `Config dir: ${configDir}`);
-  log('INFO', `Base URL: ${baseUrl}`);
+  log('INFO', 'Base URL: <configured>');
   log('INFO', `Model: ${model}`);
   log('INFO', `Token: ${mask(token)}`);
 

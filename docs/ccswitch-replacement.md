@@ -43,8 +43,8 @@ Codex++ is intentionally not part of `switch.js use`: it enhances the Codex App 
 ```bash
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/switch.sh)" -- add sss \
   --token YOUR_TOKEN \
-  --base-url https://node-hk.sssaicode.com/api \
-  --codex-url https://codex1.sssaicode.com/api/v1 \
+  --base-url https://example.test/api \
+  --codex-url https://example.test/v1 \
   --openclaw-model anthropic/claude-opus-4-7
 
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/switch.sh)" -- use sss

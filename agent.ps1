@@ -90,19 +90,19 @@ switch ($choice.ToLowerInvariant()) {
 
 if ($agent -eq 'codex') {
     $token = Ask-Value 'API token' $(if ($env:AGENT_TOKEN) { $env:AGENT_TOKEN } elseif ($env:CODEX_TOKEN) { $env:CODEX_TOKEN } else { '' })
-    Write-Host '[INFO] Common Codex option: https://codex1.sssaicode.com/api/v1' -ForegroundColor Cyan
+    Write-Host '[INFO] Codex API base URL is required; no default is bundled' -ForegroundColor Cyan
     $baseUrl = Ask-Value 'Codex API base URL' $(if ($env:AGENT_BASE_URL) { $env:AGENT_BASE_URL } elseif ($env:CODEX_API_URL) { $env:CODEX_API_URL } else { '' })
     Assert-TokenAndBaseUrl -Token $token -BaseUrl $baseUrl
     Invoke-AgentInstaller -Agent 'codex' -Token $token -BaseUrl $baseUrl
 } elseif ($agent -eq 'claudecode') {
     $token = Ask-Value 'API token' $(if ($env:AGENT_TOKEN) { $env:AGENT_TOKEN } elseif ($env:CLAUDE_TOKEN) { $env:CLAUDE_TOKEN } elseif ($env:CLAUDE_CLIENT_TOKEN) { $env:CLAUDE_CLIENT_TOKEN } else { '' })
-    Write-Host '[INFO] Common Claude option: https://node-hk.sssaicode.com/api' -ForegroundColor Cyan
+    Write-Host '[INFO] Claude API base URL is required; no default is bundled' -ForegroundColor Cyan
     $baseUrl = Ask-Value 'Claude API base URL' $(if ($env:AGENT_BASE_URL) { $env:AGENT_BASE_URL } elseif ($env:CLAUDE_API_URL) { $env:CLAUDE_API_URL } else { '' })
     Assert-TokenAndBaseUrl -Token $token -BaseUrl $baseUrl
     Invoke-AgentInstaller -Agent 'claudecode' -Token $token -BaseUrl $baseUrl
 } elseif ($agent -eq 'openclaw') {
     $token = Ask-Value 'API token' $(if ($env:AGENT_TOKEN) { $env:AGENT_TOKEN } elseif ($env:OPENCLAW_TOKEN) { $env:OPENCLAW_TOKEN } else { '' })
-    Write-Host '[INFO] Common OpenClaw option: https://node-hk.sssaicode.com/api' -ForegroundColor Cyan
+    Write-Host '[INFO] OpenClaw base URL is required; no default is bundled' -ForegroundColor Cyan
     $baseUrl = Ask-Value 'OpenClaw base URL' $(if ($env:AGENT_BASE_URL) { $env:AGENT_BASE_URL } elseif ($env:OPENCLAW_BASE_URL) { $env:OPENCLAW_BASE_URL } else { '' })
     $model = Ask-Value 'OpenClaw model' $(if ($env:AGENT_MODEL) { $env:AGENT_MODEL } elseif ($env:OPENCLAW_MODEL) { $env:OPENCLAW_MODEL } else { 'anthropic/claude-opus-4-7' })
     Assert-TokenAndBaseUrl -Token $token -BaseUrl $baseUrl
@@ -114,9 +114,9 @@ if ($agent -eq 'codex') {
     Invoke-AgentInstaller -Agent 'codexplusplus' -Token '' -BaseUrl ''
 } else {
     $sharedToken = Ask-Value 'Shared API token' $(if ($env:AGENT_TOKEN) { $env:AGENT_TOKEN } else { '' })
-    Write-Host '[INFO] Common non-Codex option: https://node-hk.sssaicode.com/api' -ForegroundColor Cyan
+    Write-Host '[INFO] Non-Codex base URL is required; no default is bundled' -ForegroundColor Cyan
     $sharedBase = Ask-Value 'Shared non-Codex base URL' $(if ($env:AGENT_BASE_URL) { $env:AGENT_BASE_URL } else { '' })
-    Write-Host '[INFO] Common Codex option: https://codex1.sssaicode.com/api/v1' -ForegroundColor Cyan
+    Write-Host '[INFO] Codex API base URL is required; no default is bundled' -ForegroundColor Cyan
     $codexBase = Ask-Value 'Codex API base URL' $(if ($env:CODEX_API_URL) { $env:CODEX_API_URL } else { '' })
     $model = Ask-Value 'OpenClaw model' $(if ($env:AGENT_MODEL) { $env:AGENT_MODEL } elseif ($env:OPENCLAW_MODEL) { $env:OPENCLAW_MODEL } else { 'anthropic/claude-opus-4-7' })
     Assert-TokenAndBaseUrl -Token $sharedToken -BaseUrl $sharedBase

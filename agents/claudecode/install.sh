@@ -47,6 +47,9 @@ mask_secret() {
   local value="$1"
   if [[ ${#value} -le 8 ]]; then printf "<hidden>"; else printf "%s...%s" "${value:0:4}" "${value: -4}"; fi
 }
+mask_url() {
+  [[ -n "$1" ]] && printf "<configured>" || printf "<missing>"
+}
 
 command_exists() { command -v "$1" >/dev/null 2>&1; }
 
@@ -184,7 +187,7 @@ main() {
   printf "%b+--------------------------------------------------+%b\n" "$CYAN" "$NC"
   step "1/7" "Inspect Claude Code settings"
   info "OS: $(uname -s)/$(uname -m)"
-  info "API URL: $CLAUDE_BASE_URL"
+  info "API URL: $(mask_url "$CLAUDE_BASE_URL")"
   [[ -n "$CLAUDE_TOKEN_VALUE" ]] && info "Token: $(mask_secret "$CLAUDE_TOKEN_VALUE")"
   validate_required_inputs
   step "2/7" "Verify config directories"

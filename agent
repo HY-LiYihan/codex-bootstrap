@@ -87,7 +87,7 @@ agent_bootstrap_main() {
     printf "%b+--------------------------------------------------+%b\n\n" "$cyan" "$nc"
 
     ab_read "API token" token "${AGENT_TOKEN:-${CODEX_TOKEN:-}}"
-    ab_info "Common Codex option: https://codex1.sssaicode.com/api/v1"
+    ab_info "Codex API base URL is required; no default is bundled"
     ab_read "Codex API base URL" base_url "${AGENT_BASE_URL:-${CODEX_API_URL:-}}"
     ab_require_pair "$token" "$base_url" || return 1
 
@@ -141,7 +141,7 @@ agent_bootstrap_main() {
   printf "%b|%b Codex ready                                  %b|%b\n" "$cyan" "$nc" "$cyan" "$nc"
   printf "%b+--------------------------------------------------+%b\n\n" "$cyan" "$nc"
   ab_info "Agent: codex"
-  ab_info "Base URL: $base_url"
+  ab_info "Base URL: <configured>"
   ab_run_installer "codex" "$token" "$base_url"
 }
 
@@ -175,7 +175,7 @@ MENU
   case "$agent" in
     codex)
       ab_read "API token" token "${AGENT_TOKEN:-${CODEX_TOKEN:-}}"
-      ab_info "Common Codex option: https://codex1.sssaicode.com/api/v1"
+      ab_info "Codex API base URL is required; no default is bundled"
       ab_read "Codex API base URL" base_url "${AGENT_BASE_URL:-${CODEX_API_URL:-}}"
       ab_require_pair "$token" "$base_url" || return 1
       printf "\nChoose Codex security profile:\n"
@@ -191,14 +191,14 @@ MENU
       ;;
     claudecode)
       ab_read "API token" token "${AGENT_TOKEN:-${CLAUDE_TOKEN:-${CLAUDE_CLIENT_TOKEN:-}}}"
-      ab_info "Common Claude option: https://node-hk.sssaicode.com/api"
+      ab_info "Claude API base URL is required; no default is bundled"
       ab_read "Claude API base URL" base_url "${AGENT_BASE_URL:-${CLAUDE_API_URL:-}}"
       ab_require_pair "$token" "$base_url" || return 1
       ab_run_installer "claudecode" "$token" "$base_url"
       ;;
     openclaw)
       ab_read "API token" token "${AGENT_TOKEN:-${OPENCLAW_TOKEN:-}}"
-      ab_info "Common OpenClaw option: https://node-hk.sssaicode.com/api"
+      ab_info "OpenClaw base URL is required; no default is bundled"
       ab_read "OpenClaw base URL" base_url "${AGENT_BASE_URL:-${OPENCLAW_BASE_URL:-}}"
       ab_read "OpenClaw model" model "${AGENT_MODEL:-${OPENCLAW_MODEL:-anthropic/claude-opus-4-7}}"
       ab_require_pair "$token" "$base_url" || return 1
@@ -218,9 +218,9 @@ MENU
       ;;
     all)
       ab_read "Shared API token" token "${AGENT_TOKEN:-}"
-      ab_info "Common non-Codex option: https://node-hk.sssaicode.com/api"
+      ab_info "Non-Codex base URL is required; no default is bundled"
       ab_read "Shared non-Codex base URL" base_url "${AGENT_BASE_URL:-}"
-      ab_info "Common Codex option: https://codex1.sssaicode.com/api/v1"
+      ab_info "Codex API base URL is required; no default is bundled"
       ab_read "Codex API base URL" codex_base_url "${CODEX_API_URL:-}"
       ab_read "OpenClaw model" model "${AGENT_MODEL:-${OPENCLAW_MODEL:-anthropic/claude-opus-4-7}}"
       ab_require_pair "$token" "$base_url" || return 1

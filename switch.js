@@ -4,6 +4,12 @@
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
+let codexProviderSync = null;
+try {
+  codexProviderSync = require('./shared/codex-provider-sync.js');
+} catch {
+  codexProviderSync = null;
+}
 
 const HOME = os.homedir();
 const STATE_DIR = process.env.AGENT_BOOTSTRAP_HOME || path.join(HOME, '.agent-bootstrap');
@@ -22,11 +28,7 @@ const DEFAULTS = {
 
 const PRESETS = {
   sssaicode: {
-    label: 'SSSAI Code gateway',
-    baseUrl: 'https://node-hk.sssaicode.com/api',
-    codexUrl: 'https://codex1.sssaicode.com/api/v1',
-    claudeUrl: 'https://node-hk.sssaicode.com/api',
-    openclawUrl: 'https://node-hk.sssaicode.com/api',
+    label: 'SSSAI Code gateway shape; pass your own URLs explicitly',
     openclawModel: DEFAULTS.openclawModel,
   },
   custom: {
@@ -279,7 +281,7 @@ function restoreBackup(id, dryRun) {
 function buildCodexConfig(profile) {
   const provider = profile.codex.providerId || DEFAULTS.codexProviderId;
   const envKey = profile.codex.envKey || DEFAULTS.codexEnvKey;
-  return `# Managed by agent-bootstrap switcher.\nmodel = "${tomlEscape(profile.codex.model || DEFAULTS.codexModel)}"\nmodel_reasoning_effort = "${tomlEscape(profile.codex.reasoning || DEFAULTS.codexReasoning)}"\npreferred_auth_method = "apikey"\ndisable_response_storage = true\nmodel_provider = "${tomlEscape(provider)}"\napproval_policy = "never"\nsandbox_mode = "danger-full-access"\n\n[model_providers."${tomlEscape(provider)}"]\nname = "${tomlEscape(provider)}"\nbase_url = "${tomlEscape(profile.codex.baseUrl)}"\nwire_api = "responses"\nenv_key = "${tomlEscape(envKey)}"\n\n[plugins."browser-use@openai-bundled"]\nenabled = true\n`;
+  return `# Managed by agent-bootstrap switcher.\nmodel = "${tomlEscape(profile.codex.model || DEFAULTS.codexModel)}"\nmodel_reasoning_effort = "${tomlEscape(profile.codex.reasoning || DEFAULTS.codexReasoning)}"\npreferred_auth_method = "apikey"\ndisable_response_storage = true\nmodel_provider = "${tomlEscape(provider)}"\napproval_policy = "never"\nsandbox_mode = "danger-full-access"\n\n[model_providers."${tomlEscape(provider)}"]\nname = "${tomlEscape(provider)}"\nbase_url = "${tomlEscape(profile.codex.baseUrl)}"\nwire_api = "responses"\nenv_key = "${tomlEscape(envKey)}"\n`;
 }
 function applyCodex(profile, dryRun) {
   const codexDir = path.join(HOME, '.codex');
@@ -296,6 +298,23 @@ function applyCodex(profile, dryRun) {
   mkdirp(codexDir);
   writeFileAtomic(configFile, config, 0o600);
   writeFileAtomic(privateEnv, env, 0o600);
+}
+function syncCodexProviderHistory(profile, dryRun) {
+  const provider = profile.codex.providerId || DEFAULTS.codexProviderId;
+  if (!codexProviderSync?.syncProviderHistory) {
+    warn('provider history sync unavailable; skipped');
+    return;
+  }
+  try {
+    codexProviderSync.syncProviderHistory({
+      codexHome: path.join(HOME, '.codex'),
+      provider,
+      dryRun,
+      logger: { info, ok, warn },
+    });
+  } catch (err) {
+    warn(`provider history sync skipped: ${err.message}`);
+  }
 }
 function applyClaude(profile, dryRun) {
   const claudeDir = path.join(HOME, '.claude');
@@ -446,7 +465,7 @@ function installShellHook(args) {
 }
 
 function usage() {
-  console.log(`${color('bold', 'Agent Switch')}\n\nCommands:\n  preset list\n  add <name> --token TOKEN (--preset sssaicode | --base-url URL)\n  update <name> [same options as add]\n  capture <name> [--token TOKEN]\n  list [--json]\n  show <name> [--json]\n  current\n  use <name> [--agents codex,claudecode,openclaw] [--dry-run]\n  remove <name> [--force]\n  export [file] [--include-secrets]\n  import <file> [--force|--replace]\n  backups\n  restore <id|latest> [--dry-run]\n  shell-hook [--install] [--target FILE]\n  doctor [--strict]\n\nExamples:\n  node switch.js add sss --preset sssaicode --token YOUR_TOKEN\n  node switch.js use sss\n  node switch.js capture current-local\n  node switch.js export profiles.safe.json\n`);
+  console.log(`${color('bold', 'Agent Switch')}\n\nCommands:\n  preset list\n  add <name> --token TOKEN (--base-url URL | --codex-url URL --claude-url URL --openclaw-url URL)\n  update <name> [same options as add]\n  capture <name> [--token TOKEN]\n  list [--json]\n  show <name> [--json]\n  current\n  use <name> [--agents codex,claudecode,openclaw] [--dry-run]\n  remove <name> [--force]\n  export [file] [--include-secrets]\n  import <file> [--force|--replace]\n  backups\n  restore <id|latest> [--dry-run]\n  shell-hook [--install] [--target FILE]\n  doctor [--strict]\n\nExamples:\n  node switch.js add work --token YOUR_TOKEN --base-url YOUR_BASE_URL --codex-url YOUR_CODEX_BASE_URL\n  node switch.js use work\n  node switch.js capture current-local\n  node switch.js export profiles.safe.json\n`);
 }
 
 function commandPreset(args) {
@@ -490,6 +509,7 @@ function commandUse(store, name, args) {
     else if (agent === 'openclaw') applyOpenClaw(profile, dryRun);
     ok(`applied ${AGENT_LABELS[agent]}`);
   });
+  if (agents.includes('codex')) syncCodexProviderHistory(profile, dryRun);
   if (!dryRun) writeJsonAtomic(CURRENT_FILE, { profile: name, agents, backup: backup.id, updatedAt: new Date().toISOString() }, 0o600);
   if (agents.includes('claudecode')) info(`Claude shell hook: ${shellHookLine()}`);
 }

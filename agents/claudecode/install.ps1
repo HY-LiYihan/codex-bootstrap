@@ -21,6 +21,7 @@ function Fail { param([string]$Message) Write-Host "[ERROR] " -NoNewline -Foregr
 function Invoke-Run { param([string]$Description,[scriptblock]$Action) if ($DryRun) { Write-Host "DRY-RUN: $Description" } else { & $Action } }
 function Test-CommandExists { param([string]$Command) return [bool](Get-Command $Command -ErrorAction SilentlyContinue) }
 function Mask-Secret { param([string]$Value) if (-not $Value) { return "<missing>" }; if ($Value.Length -le 8) { return "<hidden>" }; return "$($Value.Substring(0,4))...$($Value.Substring($Value.Length-4))" }
+function Mask-Url { param([string]$Value) if ($Value) { return "<configured>" } return "<missing>" }
 function Backup-File { param([string]$Path) if (Test-Path $Path) { $backup = "$Path.backup.$(Get-Date -Format 'yyyyMMdd_HHmmss')"; Invoke-Run "backup $Path" { Copy-Item $Path $backup -Force }; Write-Ok "Backup created: $backup" } }
 
 function Assert-RequiredInputs {
@@ -84,7 +85,7 @@ Write-Host "+--------------------------------------------------+" -ForegroundCol
 Write-Host "| Claude Code Bootstrap                           |" -ForegroundColor Cyan
 Write-Host "+--------------------------------------------------+" -ForegroundColor Cyan
 Write-Step "1/7" "Inspect Claude Code settings"
-Write-Info "API URL: $BaseUrl"
+Write-Info "API URL: $(Mask-Url $BaseUrl)"
 if ($Token) { Write-Info "Token: $(Mask-Secret $Token)" }
 Assert-RequiredInputs
 Write-Step "2/7" "Verify config directories"
