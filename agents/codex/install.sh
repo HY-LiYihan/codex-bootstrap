@@ -21,7 +21,7 @@ MODEL_VERBOSITY="${CODEX_MODEL_VERBOSITY:-medium}"
 REASONING_SUMMARY="${CODEX_REASONING_SUMMARY:-auto}"
 WEB_SEARCH="${CODEX_WEB_SEARCH:-live}"
 PROJECT_DOC_MAX_BYTES="${CODEX_PROJECT_DOC_MAX_BYTES:-65536}"
-AGENTS_MAX_THREADS="${CODEX_AGENTS_MAX_THREADS:-6}"
+AGENTS_MAX_THREADS="${CODEX_AGENTS_MAX_THREADS:-10}"
 AGENTS_MAX_DEPTH="${CODEX_AGENTS_MAX_DEPTH:-1}"
 AGENTS_JOB_MAX_RUNTIME_SECONDS="${CODEX_AGENTS_JOB_MAX_RUNTIME_SECONDS:-1800}"
 REQUEST_MAX_RETRIES="${CODEX_REQUEST_MAX_RETRIES:-4}"
@@ -505,6 +505,11 @@ project_doc_max_bytes = $PROJECT_DOC_MAX_BYTES
 approval_policy = "never"
 sandbox_mode = "danger-full-access"
 
+[agents]
+max_threads = $AGENTS_MAX_THREADS
+max_depth = $AGENTS_MAX_DEPTH
+job_max_runtime_seconds = $AGENTS_JOB_MAX_RUNTIME_SECONDS
+
 [model_providers."$provider_escaped"]
 name = "$provider_escaped"
 base_url = "$url_escaped"
@@ -527,6 +532,11 @@ disable_response_storage = true
 model_provider = "$provider_escaped"
 web_search = "$web_search_escaped"
 project_doc_max_bytes = $PROJECT_DOC_MAX_BYTES
+
+[agents]
+max_threads = $AGENTS_MAX_THREADS
+max_depth = $AGENTS_MAX_DEPTH
+job_max_runtime_seconds = $AGENTS_JOB_MAX_RUNTIME_SECONDS
 
 [model_providers."$provider_escaped"]
 name = "$provider_escaped"
@@ -623,6 +633,7 @@ main() {
   log_info "Reasoning summary: $REASONING_SUMMARY"
   log_info "Web search: $WEB_SEARCH"
   log_info "Project doc max bytes: $PROJECT_DOC_MAX_BYTES"
+  log_info "Subagents: max_threads=$AGENTS_MAX_THREADS max_depth=$AGENTS_MAX_DEPTH job_timeout_s=$AGENTS_JOB_MAX_RUNTIME_SECONDS"
   log_info "Provider retries: request=$REQUEST_MAX_RETRIES stream=$STREAM_MAX_RETRIES idle_timeout_ms=$STREAM_IDLE_TIMEOUT_MS"
   log_info "Security profile: $SECURITY_PROFILE"
   log_info "Provider history sync: $SYNC_PROVIDER_HISTORY"
