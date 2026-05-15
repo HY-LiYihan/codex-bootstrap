@@ -293,9 +293,13 @@ download_source() {
   local url="https://github.com/${BOOTSTRAP_REPO}/archive/${BOOTSTRAP_REF}.tar.gz"
   log_info "Downloading bootstrap assets from $BOOTSTRAP_REPO@$BOOTSTRAP_REF" >&2
   if command_exists curl; then
-    curl -fsSL "$url" | tar -xz -C "$tmp_dir" --strip-components=1
+    if ! curl --retry 3 --retry-delay 1 --retry-all-errors -fsSL "$url" | tar -xz -C "$tmp_dir" --strip-components=1; then
+      fail "Failed to download bootstrap assets from $BOOTSTRAP_REPO@$BOOTSTRAP_REF"
+    fi
   elif command_exists wget; then
-    wget -qO- "$url" | tar -xz -C "$tmp_dir" --strip-components=1
+    if ! wget -qO- "$url" | tar -xz -C "$tmp_dir" --strip-components=1; then
+      fail "Failed to download bootstrap assets from $BOOTSTRAP_REPO@$BOOTSTRAP_REF"
+    fi
   else
     fail "curl or wget is required"
   fi
