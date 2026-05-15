@@ -17,6 +17,13 @@ PROVIDER_ID="${CODEX_PROVIDER_ID:-custom}"
 PROVIDER_ENV_KEY="${CODEX_PROVIDER_ENV_KEY:-CODEX_API_KEY}"
 MODEL="${CODEX_MODEL:-gpt-5.5}"
 REASONING_EFFORT="${CODEX_REASONING_EFFORT:-high}"
+MODEL_VERBOSITY="${CODEX_MODEL_VERBOSITY:-medium}"
+REASONING_SUMMARY="${CODEX_REASONING_SUMMARY:-auto}"
+WEB_SEARCH="${CODEX_WEB_SEARCH:-live}"
+PROJECT_DOC_MAX_BYTES="${CODEX_PROJECT_DOC_MAX_BYTES:-65536}"
+REQUEST_MAX_RETRIES="${CODEX_REQUEST_MAX_RETRIES:-4}"
+STREAM_MAX_RETRIES="${CODEX_STREAM_MAX_RETRIES:-5}"
+STREAM_IDLE_TIMEOUT_MS="${CODEX_STREAM_IDLE_TIMEOUT_MS:-300000}"
 SECURITY_PROFILE="${CODEX_SECURITY_PROFILE:-max}"
 PROJECT_DIR="${CODEX_PROJECT_DIR:-$PWD}"
 NPM_REGISTRY="${CODEX_NPM_REGISTRY:-https://registry.npmmirror.com}"
@@ -87,6 +94,13 @@ Environment:
   CODEX_PROVIDER_ENV_KEY              Provider env key (default: ${PROVIDER_ENV_KEY})
   CODEX_MODEL                         Default model (default: ${MODEL})
   CODEX_REASONING_EFFORT              Reasoning effort (default: ${REASONING_EFFORT})
+  CODEX_MODEL_VERBOSITY               Model verbosity: low, medium, or high (default: ${MODEL_VERBOSITY})
+  CODEX_REASONING_SUMMARY             Reasoning summary: auto, concise, detailed, or none (default: ${REASONING_SUMMARY})
+  CODEX_WEB_SEARCH                    Web search mode: live, cached, or disabled (default: ${WEB_SEARCH})
+  CODEX_PROJECT_DOC_MAX_BYTES         Max AGENTS.md bytes to include (default: ${PROJECT_DOC_MAX_BYTES})
+  CODEX_REQUEST_MAX_RETRIES           Provider request retries (default: ${REQUEST_MAX_RETRIES})
+  CODEX_STREAM_MAX_RETRIES            Provider stream retries (default: ${STREAM_MAX_RETRIES})
+  CODEX_STREAM_IDLE_TIMEOUT_MS        Provider stream idle timeout ms (default: ${STREAM_IDLE_TIMEOUT_MS})
   CODEX_SECURITY_PROFILE              max or safe (default: ${SECURITY_PROFILE})
   CODEX_SYNC_PROVIDER_HISTORY         1 or 0 (default: ${SYNC_PROVIDER_HISTORY})
   CODEX_NPM_REGISTRY                  npm fallback registry (default: ${NPM_REGISTRY})
@@ -122,6 +136,22 @@ validate_env_key() {
 validate_required_inputs() {
   [[ -n "$API_KEY" ]] || fail "Missing CODEX_TOKEN or OPENAI_API_KEY"
   [[ -n "$API_BASE_URL" ]] || fail "Missing CODEX_API_URL or OPENAI_BASE_URL"
+  case "$MODEL_VERBOSITY" in
+    low|medium|high) ;;
+    *) fail "Invalid CODEX_MODEL_VERBOSITY: $MODEL_VERBOSITY. Use low, medium, or high." ;;
+  esac
+  case "$REASONING_SUMMARY" in
+    auto|concise|detailed|none) ;;
+    *) fail "Invalid CODEX_REASONING_SUMMARY: $REASONING_SUMMARY. Use auto, concise, detailed, or none." ;;
+  esac
+  case "$WEB_SEARCH" in
+    live|cached|disabled) ;;
+    *) fail "Invalid CODEX_WEB_SEARCH: $WEB_SEARCH. Use live, cached, or disabled." ;;
+  esac
+  [[ "$PROJECT_DOC_MAX_BYTES" =~ ^[0-9]+$ ]] || fail "Invalid CODEX_PROJECT_DOC_MAX_BYTES: $PROJECT_DOC_MAX_BYTES"
+  [[ "$REQUEST_MAX_RETRIES" =~ ^[0-9]+$ ]] || fail "Invalid CODEX_REQUEST_MAX_RETRIES: $REQUEST_MAX_RETRIES"
+  [[ "$STREAM_MAX_RETRIES" =~ ^[0-9]+$ ]] || fail "Invalid CODEX_STREAM_MAX_RETRIES: $STREAM_MAX_RETRIES"
+  [[ "$STREAM_IDLE_TIMEOUT_MS" =~ ^[0-9]+$ ]] || fail "Invalid CODEX_STREAM_IDLE_TIMEOUT_MS: $STREAM_IDLE_TIMEOUT_MS"
   case "$SECURITY_PROFILE" in
     max|full|full-auto|danger) SECURITY_PROFILE="max" ;;
     safe|official|default) SECURITY_PROFILE="safe" ;;
@@ -237,6 +267,13 @@ load_profile() {
     source "$profile_file"
     MODEL="${CODEX_MODEL:-$MODEL}"
     REASONING_EFFORT="${CODEX_REASONING_EFFORT:-$REASONING_EFFORT}"
+    MODEL_VERBOSITY="${CODEX_MODEL_VERBOSITY:-$MODEL_VERBOSITY}"
+    REASONING_SUMMARY="${CODEX_REASONING_SUMMARY:-$REASONING_SUMMARY}"
+    WEB_SEARCH="${CODEX_WEB_SEARCH:-$WEB_SEARCH}"
+    PROJECT_DOC_MAX_BYTES="${CODEX_PROJECT_DOC_MAX_BYTES:-$PROJECT_DOC_MAX_BYTES}"
+    REQUEST_MAX_RETRIES="${CODEX_REQUEST_MAX_RETRIES:-$REQUEST_MAX_RETRIES}"
+    STREAM_MAX_RETRIES="${CODEX_STREAM_MAX_RETRIES:-$STREAM_MAX_RETRIES}"
+    STREAM_IDLE_TIMEOUT_MS="${CODEX_STREAM_IDLE_TIMEOUT_MS:-$STREAM_IDLE_TIMEOUT_MS}"
     SECURITY_PROFILE="${CODEX_SECURITY_PROFILE:-$SECURITY_PROFILE}"
     log_ok "Loaded profile: $BOOTSTRAP_PROFILE"
   else
@@ -344,14 +381,17 @@ write_config() {
   log_step "5/7" "Write Codex custom provider config"
   run mkdir -p "$CODEX_HOME"
   backup_file "$CONFIG_FILE"
-  local provider_escaped env_key_escaped model_escaped effort_escaped url_escaped
+  local provider_escaped env_key_escaped model_escaped effort_escaped verbosity_escaped summary_escaped web_search_escaped url_escaped
   provider_escaped="$(toml_escape "$PROVIDER_ID")"
   env_key_escaped="$(toml_escape "$PROVIDER_ENV_KEY")"
   model_escaped="$(toml_escape "$MODEL")"
   effort_escaped="$(toml_escape "$REASONING_EFFORT")"
+  verbosity_escaped="$(toml_escape "$MODEL_VERBOSITY")"
+  summary_escaped="$(toml_escape "$REASONING_SUMMARY")"
+  web_search_escaped="$(toml_escape "$WEB_SEARCH")"
   url_escaped="$(toml_escape "$API_BASE_URL")"
   if [[ "$DRY_RUN" == "1" ]]; then
-    printf "DRY-RUN: write %s with model_provider=%s base_url=%s env_key=%s security_profile=%s\n" "$CONFIG_FILE" "$PROVIDER_ID" "$(mask_url "$API_BASE_URL")" "$PROVIDER_ENV_KEY" "$SECURITY_PROFILE"
+    printf "DRY-RUN: write %s with model_provider=%s base_url=%s env_key=%s security_profile=%s web_search=%s\n" "$CONFIG_FILE" "$PROVIDER_ID" "$(mask_url "$API_BASE_URL")" "$PROVIDER_ENV_KEY" "$SECURITY_PROFILE" "$WEB_SEARCH"
     return 0
   fi
 
@@ -361,9 +401,13 @@ write_config() {
 # This intentionally uses a custom provider, matching the simple gateway-oriented Codex setup.
 model = "$model_escaped"
 model_reasoning_effort = "$effort_escaped"
+model_verbosity = "$verbosity_escaped"
+model_reasoning_summary = "$summary_escaped"
 preferred_auth_method = "apikey"
 disable_response_storage = true
 model_provider = "$provider_escaped"
+web_search = "$web_search_escaped"
+project_doc_max_bytes = $PROJECT_DOC_MAX_BYTES
 approval_policy = "never"
 sandbox_mode = "danger-full-access"
 
@@ -372,6 +416,9 @@ name = "$provider_escaped"
 base_url = "$url_escaped"
 wire_api = "responses"
 env_key = "$env_key_escaped"
+request_max_retries = $REQUEST_MAX_RETRIES
+stream_max_retries = $STREAM_MAX_RETRIES
+stream_idle_timeout_ms = $STREAM_IDLE_TIMEOUT_MS
 TOML
   else
     cat > "$CONFIG_FILE" <<TOML
@@ -379,15 +426,22 @@ TOML
 # Safe profile: leaves high-permission controls at Codex defaults.
 model = "$model_escaped"
 model_reasoning_effort = "$effort_escaped"
+model_verbosity = "$verbosity_escaped"
+model_reasoning_summary = "$summary_escaped"
 preferred_auth_method = "apikey"
 disable_response_storage = true
 model_provider = "$provider_escaped"
+web_search = "$web_search_escaped"
+project_doc_max_bytes = $PROJECT_DOC_MAX_BYTES
 
 [model_providers."$provider_escaped"]
 name = "$provider_escaped"
 base_url = "$url_escaped"
 wire_api = "responses"
 env_key = "$env_key_escaped"
+request_max_retries = $REQUEST_MAX_RETRIES
+stream_max_retries = $STREAM_MAX_RETRIES
+stream_idle_timeout_ms = $STREAM_IDLE_TIMEOUT_MS
 TOML
   fi
 }
@@ -471,6 +525,11 @@ main() {
   log_info "Provider env key: $PROVIDER_ENV_KEY"
   log_info "Model: $MODEL"
   log_info "Reasoning effort: $REASONING_EFFORT"
+  log_info "Model verbosity: $MODEL_VERBOSITY"
+  log_info "Reasoning summary: $REASONING_SUMMARY"
+  log_info "Web search: $WEB_SEARCH"
+  log_info "Project doc max bytes: $PROJECT_DOC_MAX_BYTES"
+  log_info "Provider retries: request=$REQUEST_MAX_RETRIES stream=$STREAM_MAX_RETRIES idle_timeout_ms=$STREAM_IDLE_TIMEOUT_MS"
   log_info "Security profile: $SECURITY_PROFILE"
   log_info "Provider history sync: $SYNC_PROVIDER_HISTORY"
   log_info "Base URL: $(mask_url "$API_BASE_URL")"

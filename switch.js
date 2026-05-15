@@ -20,8 +20,15 @@ const BACKUP_DIR = path.join(STATE_DIR, 'backups');
 const DEFAULTS = {
   codexModel: 'gpt-5.5',
   codexReasoning: 'high',
+  codexVerbosity: 'medium',
+  codexReasoningSummary: 'auto',
+  codexWebSearch: 'live',
+  codexProjectDocMaxBytes: 65536,
   codexProviderId: 'custom',
   codexEnvKey: 'CODEX_API_KEY',
+  codexRequestMaxRetries: 4,
+  codexStreamMaxRetries: 5,
+  codexStreamIdleTimeoutMs: 300000,
   claudeTimeoutMs: 600000,
   openclawModel: 'anthropic/claude-opus-4-7',
 };
@@ -79,6 +86,11 @@ function parseTomlString(text, key) {
   const match = text.match(re);
   if (!match) return '';
   return match[1].replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+}
+function parseTomlNumber(text, key) {
+  const re = new RegExp(`^\\s*${key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*=\\s*([0-9]+)\\s*$`, 'm');
+  const match = text.match(re);
+  return match ? Number(match[1]) : undefined;
 }
 function parseEnvValue(text, key) {
   if (!key) return '';
@@ -199,8 +211,15 @@ function profileFromArgs(name, args, existing = {}) {
       baseUrl: codexUrl,
       model: args['codex-model'] || args.model || process.env.CODEX_MODEL || existing.codex?.model || DEFAULTS.codexModel,
       reasoning: args.reasoning || process.env.CODEX_REASONING_EFFORT || existing.codex?.reasoning || DEFAULTS.codexReasoning,
+      verbosity: args.verbosity || args['codex-verbosity'] || process.env.CODEX_MODEL_VERBOSITY || existing.codex?.verbosity || DEFAULTS.codexVerbosity,
+      reasoningSummary: args['reasoning-summary'] || args['codex-reasoning-summary'] || process.env.CODEX_REASONING_SUMMARY || existing.codex?.reasoningSummary || DEFAULTS.codexReasoningSummary,
+      webSearch: args['web-search'] || args['codex-web-search'] || process.env.CODEX_WEB_SEARCH || existing.codex?.webSearch || DEFAULTS.codexWebSearch,
+      projectDocMaxBytes: Number(args['project-doc-max-bytes'] || args['codex-project-doc-max-bytes'] || process.env.CODEX_PROJECT_DOC_MAX_BYTES || existing.codex?.projectDocMaxBytes || DEFAULTS.codexProjectDocMaxBytes),
       providerId: args['codex-provider'] || process.env.CODEX_PROVIDER_ID || existing.codex?.providerId || DEFAULTS.codexProviderId,
       envKey: args['codex-env-key'] || process.env.CODEX_PROVIDER_ENV_KEY || existing.codex?.envKey || DEFAULTS.codexEnvKey,
+      requestMaxRetries: Number(args['request-max-retries'] || args['codex-request-max-retries'] || process.env.CODEX_REQUEST_MAX_RETRIES || existing.codex?.requestMaxRetries || DEFAULTS.codexRequestMaxRetries),
+      streamMaxRetries: Number(args['stream-max-retries'] || args['codex-stream-max-retries'] || process.env.CODEX_STREAM_MAX_RETRIES || existing.codex?.streamMaxRetries || DEFAULTS.codexStreamMaxRetries),
+      streamIdleTimeoutMs: Number(args['stream-idle-timeout-ms'] || args['codex-stream-idle-timeout-ms'] || process.env.CODEX_STREAM_IDLE_TIMEOUT_MS || existing.codex?.streamIdleTimeoutMs || DEFAULTS.codexStreamIdleTimeoutMs),
     },
     claudecode: {
       token: claudeToken && claudeToken !== token ? claudeToken : undefined,
@@ -281,7 +300,7 @@ function restoreBackup(id, dryRun) {
 function buildCodexConfig(profile) {
   const provider = profile.codex.providerId || DEFAULTS.codexProviderId;
   const envKey = profile.codex.envKey || DEFAULTS.codexEnvKey;
-  return `# Managed by agent-bootstrap switcher.\nmodel = "${tomlEscape(profile.codex.model || DEFAULTS.codexModel)}"\nmodel_reasoning_effort = "${tomlEscape(profile.codex.reasoning || DEFAULTS.codexReasoning)}"\npreferred_auth_method = "apikey"\ndisable_response_storage = true\nmodel_provider = "${tomlEscape(provider)}"\napproval_policy = "never"\nsandbox_mode = "danger-full-access"\n\n[model_providers."${tomlEscape(provider)}"]\nname = "${tomlEscape(provider)}"\nbase_url = "${tomlEscape(profile.codex.baseUrl)}"\nwire_api = "responses"\nenv_key = "${tomlEscape(envKey)}"\n`;
+  return `# Managed by agent-bootstrap switcher.\nmodel = "${tomlEscape(profile.codex.model || DEFAULTS.codexModel)}"\nmodel_reasoning_effort = "${tomlEscape(profile.codex.reasoning || DEFAULTS.codexReasoning)}"\nmodel_verbosity = "${tomlEscape(profile.codex.verbosity || DEFAULTS.codexVerbosity)}"\nmodel_reasoning_summary = "${tomlEscape(profile.codex.reasoningSummary || DEFAULTS.codexReasoningSummary)}"\npreferred_auth_method = "apikey"\ndisable_response_storage = true\nmodel_provider = "${tomlEscape(provider)}"\nweb_search = "${tomlEscape(profile.codex.webSearch || DEFAULTS.codexWebSearch)}"\nproject_doc_max_bytes = ${Number(profile.codex.projectDocMaxBytes || DEFAULTS.codexProjectDocMaxBytes)}\napproval_policy = "never"\nsandbox_mode = "danger-full-access"\n\n[model_providers."${tomlEscape(provider)}"]\nname = "${tomlEscape(provider)}"\nbase_url = "${tomlEscape(profile.codex.baseUrl)}"\nwire_api = "responses"\nenv_key = "${tomlEscape(envKey)}"\nrequest_max_retries = ${Number(profile.codex.requestMaxRetries || DEFAULTS.codexRequestMaxRetries)}\nstream_max_retries = ${Number(profile.codex.streamMaxRetries || DEFAULTS.codexStreamMaxRetries)}\nstream_idle_timeout_ms = ${Number(profile.codex.streamIdleTimeoutMs || DEFAULTS.codexStreamIdleTimeoutMs)}\n`;
 }
 function applyCodex(profile, dryRun) {
   const codexDir = path.join(HOME, '.codex');
@@ -395,8 +414,15 @@ function captureProfile(name, args) {
       baseUrl: args['codex-url'] || parseTomlString(codexConfig, 'base_url') || '',
       model: args['codex-model'] || parseTomlString(codexConfig, 'model') || DEFAULTS.codexModel,
       reasoning: args.reasoning || parseTomlString(codexConfig, 'model_reasoning_effort') || DEFAULTS.codexReasoning,
+      verbosity: args.verbosity || args['codex-verbosity'] || parseTomlString(codexConfig, 'model_verbosity') || DEFAULTS.codexVerbosity,
+      reasoningSummary: args['reasoning-summary'] || args['codex-reasoning-summary'] || parseTomlString(codexConfig, 'model_reasoning_summary') || DEFAULTS.codexReasoningSummary,
+      webSearch: args['web-search'] || args['codex-web-search'] || parseTomlString(codexConfig, 'web_search') || DEFAULTS.codexWebSearch,
+      projectDocMaxBytes: Number(args['project-doc-max-bytes'] || args['codex-project-doc-max-bytes'] || parseTomlNumber(codexConfig, 'project_doc_max_bytes') || DEFAULTS.codexProjectDocMaxBytes),
       providerId: args['codex-provider'] || parseTomlString(codexConfig, 'model_provider') || DEFAULTS.codexProviderId,
       envKey: args['codex-env-key'] || codexEnvKey,
+      requestMaxRetries: Number(args['request-max-retries'] || args['codex-request-max-retries'] || parseTomlNumber(codexConfig, 'request_max_retries') || DEFAULTS.codexRequestMaxRetries),
+      streamMaxRetries: Number(args['stream-max-retries'] || args['codex-stream-max-retries'] || parseTomlNumber(codexConfig, 'stream_max_retries') || DEFAULTS.codexStreamMaxRetries),
+      streamIdleTimeoutMs: Number(args['stream-idle-timeout-ms'] || args['codex-stream-idle-timeout-ms'] || parseTomlNumber(codexConfig, 'stream_idle_timeout_ms') || DEFAULTS.codexStreamIdleTimeoutMs),
     },
     claudecode: {
       token: claudeToken && claudeToken !== token ? claudeToken : undefined,

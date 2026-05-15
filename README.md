@@ -169,9 +169,13 @@ Codex, maximum-autonomy profile:
 ```toml
 model = "gpt-5.5"
 model_reasoning_effort = "high"
+model_verbosity = "medium"
+model_reasoning_summary = "auto"
 preferred_auth_method = "apikey"
 disable_response_storage = true
 model_provider = "custom"
+web_search = "live"
+project_doc_max_bytes = 65536
 approval_policy = "never"
 sandbox_mode = "danger-full-access"
 
@@ -180,6 +184,9 @@ name = "custom"
 base_url = "YOUR_CODEX_BASE_URL"
 wire_api = "responses"
 env_key = "CODEX_API_KEY"
+request_max_retries = 4
+stream_max_retries = 5
+stream_idle_timeout_ms = 300000
 ```
 
 Codex provider history sync:
@@ -195,15 +202,22 @@ Codex, safe profile:
 ```toml
 model = "gpt-5.5"
 model_reasoning_effort = "high"
+model_verbosity = "medium"
+model_reasoning_summary = "auto"
 preferred_auth_method = "apikey"
 disable_response_storage = true
 model_provider = "custom"
+web_search = "live"
+project_doc_max_bytes = 65536
 
 [model_providers."custom"]
 name = "custom"
 base_url = "YOUR_CODEX_BASE_URL"
 wire_api = "responses"
 env_key = "CODEX_API_KEY"
+request_max_retries = 4
+stream_max_retries = 5
+stream_idle_timeout_ms = 300000
 ```
 
 Claude Code:
