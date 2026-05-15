@@ -27,7 +27,7 @@ Recommended stable Codex-only install:
 CODEX_TOKEN="YOUR_TOKEN" CODEX_API_URL="YOUR_BASE_URL" bash -c "$(curl -fsSL https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/install-codex.sh)"
 ```
 
-This path intentionally does one thing: install or verify Codex CLI, write a `custom` provider config, store the token in `~/.codex/private.env`, and sync older Codex session metadata to the active provider name.
+This path intentionally does one thing: install or verify Codex CLI, write a `custom` provider config, store the token in `~/.codex/private.env`, and sync older Codex session metadata to the active provider name. On a fresh machine, the installer first tries Bun, falls back to npm, and can install Node.js through NVM when npm is missing.
 
 There are also three broader entry styles:
 
@@ -58,6 +58,12 @@ The wizard never uses a hidden key or base URL. It asks for both values explicit
 - `Maximum autonomy`: writes `approval_policy = "never"` and `sandbox_mode = "danger-full-access"`.
 - `Official safe defaults`: leaves approval policy, sandbox mode, and project trust at Codex defaults.
 - `Codex++ addon`: optional install, optional provider sync, optional immediate launch.
+
+Codex runtime fallback controls:
+
+- `--no-bun`: skip automatic Bun installation and use npm directly.
+- `--no-node`: do not install Node.js through NVM if npm is missing.
+- `CODEX_NODE_VERSION`: override the Node.js version used by the NVM fallback.
 
 Non-interactive Codex install on macOS/Linux:
 

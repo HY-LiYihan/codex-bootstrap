@@ -21,12 +21,17 @@ MODEL_VERBOSITY="${CODEX_MODEL_VERBOSITY:-medium}"
 REASONING_SUMMARY="${CODEX_REASONING_SUMMARY:-auto}"
 WEB_SEARCH="${CODEX_WEB_SEARCH:-live}"
 PROJECT_DOC_MAX_BYTES="${CODEX_PROJECT_DOC_MAX_BYTES:-65536}"
+AGENTS_MAX_THREADS="${CODEX_AGENTS_MAX_THREADS:-6}"
+AGENTS_MAX_DEPTH="${CODEX_AGENTS_MAX_DEPTH:-1}"
+AGENTS_JOB_MAX_RUNTIME_SECONDS="${CODEX_AGENTS_JOB_MAX_RUNTIME_SECONDS:-1800}"
 REQUEST_MAX_RETRIES="${CODEX_REQUEST_MAX_RETRIES:-4}"
 STREAM_MAX_RETRIES="${CODEX_STREAM_MAX_RETRIES:-5}"
 STREAM_IDLE_TIMEOUT_MS="${CODEX_STREAM_IDLE_TIMEOUT_MS:-300000}"
 SECURITY_PROFILE="${CODEX_SECURITY_PROFILE:-max}"
 PROJECT_DIR="${CODEX_PROJECT_DIR:-$PWD}"
 NPM_REGISTRY="${CODEX_NPM_REGISTRY:-https://registry.npmmirror.com}"
+INSTALL_NODE="${CODEX_INSTALL_NODE:-1}"
+NODE_VERSION="${CODEX_NODE_VERSION:-24.12.0}"
 LOCAL_SOURCE=""
 DRY_RUN=0
 YES=0
@@ -85,6 +90,7 @@ Options:
   --sync-provider-history     Sync old Codex sessions to the selected model_provider (default)
   --no-sync-provider-history  Skip provider history sync
   --no-bun             Do not install Bun automatically; use npm if available
+  --no-node            Do not install Node.js with NVM when npm is missing
   -h, --help           Show this help
 
 Environment:
@@ -98,12 +104,17 @@ Environment:
   CODEX_REASONING_SUMMARY             Reasoning summary: auto, concise, detailed, or none (default: ${REASONING_SUMMARY})
   CODEX_WEB_SEARCH                    Web search mode: live, cached, or disabled (default: ${WEB_SEARCH})
   CODEX_PROJECT_DOC_MAX_BYTES         Max AGENTS.md bytes to include (default: ${PROJECT_DOC_MAX_BYTES})
+  CODEX_AGENTS_MAX_THREADS            Max simultaneously open subagent threads (default: ${AGENTS_MAX_THREADS})
+  CODEX_AGENTS_MAX_DEPTH              Max subagent nesting depth (default: ${AGENTS_MAX_DEPTH})
+  CODEX_AGENTS_JOB_MAX_RUNTIME_SECONDS Max batch subagent job runtime seconds (default: ${AGENTS_JOB_MAX_RUNTIME_SECONDS})
   CODEX_REQUEST_MAX_RETRIES           Provider request retries (default: ${REQUEST_MAX_RETRIES})
   CODEX_STREAM_MAX_RETRIES            Provider stream retries (default: ${STREAM_MAX_RETRIES})
   CODEX_STREAM_IDLE_TIMEOUT_MS        Provider stream idle timeout ms (default: ${STREAM_IDLE_TIMEOUT_MS})
   CODEX_SECURITY_PROFILE              max or safe (default: ${SECURITY_PROFILE})
   CODEX_SYNC_PROVIDER_HISTORY         1 or 0 (default: ${SYNC_PROVIDER_HISTORY})
   CODEX_NPM_REGISTRY                  npm fallback registry (default: ${NPM_REGISTRY})
+  CODEX_INSTALL_NODE                  1 or 0; install Node.js with NVM if npm is missing (default: ${INSTALL_NODE})
+  CODEX_NODE_VERSION                  Node.js version for NVM fallback (default: ${NODE_VERSION})
   CODEX_PROFILE                       Profile name (default: default)
 USAGE
 }
@@ -123,6 +134,7 @@ while [[ $# -gt 0 ]]; do
     --sync-provider-history) SYNC_PROVIDER_HISTORY=1; shift ;;
     --no-sync-provider-history) SYNC_PROVIDER_HISTORY=0; shift ;;
     --no-bun) INSTALL_BUN=0; shift ;;
+    --no-node) INSTALL_NODE=0; shift ;;
     -h|--help) usage; exit 0 ;;
     *) fail "Unknown option: $1" ;;
   esac
@@ -149,6 +161,9 @@ validate_required_inputs() {
     *) fail "Invalid CODEX_WEB_SEARCH: $WEB_SEARCH. Use live, cached, or disabled." ;;
   esac
   [[ "$PROJECT_DOC_MAX_BYTES" =~ ^[0-9]+$ ]] || fail "Invalid CODEX_PROJECT_DOC_MAX_BYTES: $PROJECT_DOC_MAX_BYTES"
+  [[ "$AGENTS_MAX_THREADS" =~ ^[0-9]+$ ]] || fail "Invalid CODEX_AGENTS_MAX_THREADS: $AGENTS_MAX_THREADS"
+  [[ "$AGENTS_MAX_DEPTH" =~ ^[0-9]+$ ]] || fail "Invalid CODEX_AGENTS_MAX_DEPTH: $AGENTS_MAX_DEPTH"
+  [[ "$AGENTS_JOB_MAX_RUNTIME_SECONDS" =~ ^[0-9]+$ ]] || fail "Invalid CODEX_AGENTS_JOB_MAX_RUNTIME_SECONDS: $AGENTS_JOB_MAX_RUNTIME_SECONDS"
   [[ "$REQUEST_MAX_RETRIES" =~ ^[0-9]+$ ]] || fail "Invalid CODEX_REQUEST_MAX_RETRIES: $REQUEST_MAX_RETRIES"
   [[ "$STREAM_MAX_RETRIES" =~ ^[0-9]+$ ]] || fail "Invalid CODEX_STREAM_MAX_RETRIES: $STREAM_MAX_RETRIES"
   [[ "$STREAM_IDLE_TIMEOUT_MS" =~ ^[0-9]+$ ]] || fail "Invalid CODEX_STREAM_IDLE_TIMEOUT_MS: $STREAM_IDLE_TIMEOUT_MS"
@@ -161,6 +176,11 @@ validate_required_inputs() {
     1|true|yes|on) SYNC_PROVIDER_HISTORY=1 ;;
     0|false|no|off) SYNC_PROVIDER_HISTORY=0 ;;
     *) fail "Invalid CODEX_SYNC_PROVIDER_HISTORY: $SYNC_PROVIDER_HISTORY. Use 1 or 0." ;;
+  esac
+  case "$INSTALL_NODE" in
+    1|true|yes|on) INSTALL_NODE=1 ;;
+    0|false|no|off) INSTALL_NODE=0 ;;
+    *) fail "Invalid CODEX_INSTALL_NODE: $INSTALL_NODE. Use 1 or 0." ;;
   esac
 }
 
@@ -271,6 +291,9 @@ load_profile() {
     REASONING_SUMMARY="${CODEX_REASONING_SUMMARY:-$REASONING_SUMMARY}"
     WEB_SEARCH="${CODEX_WEB_SEARCH:-$WEB_SEARCH}"
     PROJECT_DOC_MAX_BYTES="${CODEX_PROJECT_DOC_MAX_BYTES:-$PROJECT_DOC_MAX_BYTES}"
+    AGENTS_MAX_THREADS="${CODEX_AGENTS_MAX_THREADS:-$AGENTS_MAX_THREADS}"
+    AGENTS_MAX_DEPTH="${CODEX_AGENTS_MAX_DEPTH:-$AGENTS_MAX_DEPTH}"
+    AGENTS_JOB_MAX_RUNTIME_SECONDS="${CODEX_AGENTS_JOB_MAX_RUNTIME_SECONDS:-$AGENTS_JOB_MAX_RUNTIME_SECONDS}"
     REQUEST_MAX_RETRIES="${CODEX_REQUEST_MAX_RETRIES:-$REQUEST_MAX_RETRIES}"
     STREAM_MAX_RETRIES="${CODEX_STREAM_MAX_RETRIES:-$STREAM_MAX_RETRIES}"
     STREAM_IDLE_TIMEOUT_MS="${CODEX_STREAM_IDLE_TIMEOUT_MS:-$STREAM_IDLE_TIMEOUT_MS}"
@@ -317,7 +340,7 @@ ensure_bun() {
   if [[ "$DRY_RUN" == "1" ]]; then
     run bash -c 'curl -fsSL https://bun.sh/install | bash'
   else
-    if curl -fsSL --connect-timeout 15 https://bun.sh/install | bash; then
+    if curl --retry 3 --retry-delay 1 --retry-all-errors -fsSL --connect-timeout 15 https://bun.sh/install | bash; then
       log_ok "Bun installed with official installer"
     else
       log_warn "Official Bun installer failed; npm fallback may still work"
@@ -327,6 +350,73 @@ ensure_bun() {
   export BUN_INSTALL="$HOME/.bun"
   export PATH="$BUN_INSTALL/bin:$PATH"
   command_exists bun || return 1
+}
+
+load_nvm() {
+  export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
+  if [[ -s "$NVM_DIR/nvm.sh" ]]; then
+    # shellcheck disable=SC1090
+    . "$NVM_DIR/nvm.sh"
+    return 0
+  fi
+  return 1
+}
+
+install_nvm() {
+  export NVM_DIR="${NVM_DIR:-$HOME/.nvm}"
+  local nvm_url="https://github.com/nvm-sh/nvm/archive/v0.40.3.tar.gz"
+  local shell_rc
+  shell_rc="$(detect_shell_rc)"
+  log_info "Installing NVM into $NVM_DIR"
+
+  if [[ "$DRY_RUN" == "1" ]]; then
+    run mkdir -p "$NVM_DIR"
+    run bash -c "curl --retry 3 --retry-delay 1 --retry-all-errors -fsSL '$nvm_url' | tar -xz -C '$NVM_DIR' --strip-components=1"
+    return 0
+  fi
+
+  mkdir -p "$NVM_DIR"
+  if ! curl --retry 3 --retry-delay 1 --retry-all-errors -fsSL "$nvm_url" | tar -xz -C "$NVM_DIR" --strip-components=1; then
+    fail "Failed to install NVM from $nvm_url"
+  fi
+
+  touch "$shell_rc"
+  if ! grep -Fq 'NVM_DIR="$HOME/.nvm"' "$shell_rc"; then
+    {
+      printf "\n# NVM - Added by Codex Bootstrap\n"
+      printf 'export NVM_DIR="$HOME/.nvm"\n'
+      printf '[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"\n'
+      printf '[ -s "$NVM_DIR/bash_completion" ] && . "$NVM_DIR/bash_completion"\n'
+    } >> "$shell_rc"
+  fi
+  log_ok "NVM ready: $NVM_DIR"
+}
+
+ensure_npm_available() {
+  if command_exists npm; then
+    return 0
+  fi
+  [[ "$INSTALL_NODE" == "1" ]] || fail "npm is required when Bun is unavailable. Install Node.js or rerun without --no-node."
+
+  log_info "npm is missing; preparing Node.js $NODE_VERSION with NVM"
+  if [[ "$DRY_RUN" == "1" ]]; then
+    if ! load_nvm; then
+      install_nvm
+    fi
+    run bash -c "source '$NVM_DIR/nvm.sh' && nvm install '$NODE_VERSION' && nvm use '$NODE_VERSION' && nvm alias default '$NODE_VERSION'"
+    return 0
+  fi
+
+  if ! load_nvm; then
+    install_nvm
+    load_nvm || fail "NVM installed but could not be loaded"
+  fi
+
+  nvm install "$NODE_VERSION"
+  nvm use "$NODE_VERSION"
+  nvm alias default "$NODE_VERSION"
+  command_exists npm || fail "Node.js was installed but npm is still unavailable"
+  log_ok "Node.js/npm ready: node $(node --version), npm $(npm --version)"
 }
 
 install_codex() {
@@ -346,7 +436,7 @@ install_codex() {
     return 0
   fi
 
-  command_exists npm || fail "npm is required when Bun is unavailable. Install Node.js or rerun without --no-bun."
+  ensure_npm_available
   if run npm install -g @openai/codex; then
     return 0
   fi
