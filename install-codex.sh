@@ -52,7 +52,7 @@ download_source() {
   url="https://github.com/${BOOTSTRAP_REPO}/archive/${BOOTSTRAP_REF}.tar.gz"
   info "Downloading Codex bootstrap assets from $BOOTSTRAP_REPO@$BOOTSTRAP_REF" >&2
   if command -v curl >/dev/null 2>&1; then
-    if ! curl --retry 3 --retry-delay 1 --retry-all-errors -fsSL "$url" | tar -xz -C "$tmp_dir" --strip-components=1; then
+    if ! curl --retry 3 --retry-delay 1 -fsSL "$url" | tar -xz -C "$tmp_dir" --strip-components=1; then
       fail "Failed to download Codex bootstrap assets from $BOOTSTRAP_REPO@$BOOTSTRAP_REF"
     fi
   elif command -v wget >/dev/null 2>&1; then

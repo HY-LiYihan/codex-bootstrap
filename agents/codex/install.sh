@@ -316,7 +316,7 @@ download_source() {
   local url="https://github.com/${BOOTSTRAP_REPO}/archive/${BOOTSTRAP_REF}.tar.gz"
   log_info "Downloading bootstrap assets from $BOOTSTRAP_REPO@$BOOTSTRAP_REF" >&2
   if command_exists curl; then
-    if ! curl --retry 3 --retry-delay 1 --retry-all-errors -fsSL "$url" | tar -xz -C "$tmp_dir" --strip-components=1; then
+    if ! curl --retry 3 --retry-delay 1 -fsSL "$url" | tar -xz -C "$tmp_dir" --strip-components=1; then
       fail "Failed to download bootstrap assets from $BOOTSTRAP_REPO@$BOOTSTRAP_REF"
     fi
   elif command_exists wget; then
@@ -340,7 +340,7 @@ ensure_bun() {
   if [[ "$DRY_RUN" == "1" ]]; then
     run bash -c 'curl -fsSL https://bun.sh/install | bash'
   else
-    if curl --retry 3 --retry-delay 1 --retry-all-errors -fsSL --connect-timeout 15 https://bun.sh/install | bash; then
+    if curl --retry 3 --retry-delay 1 -fsSL --connect-timeout 15 https://bun.sh/install | bash; then
       log_ok "Bun installed with official installer"
     else
       log_warn "Official Bun installer failed; npm fallback may still work"
@@ -371,12 +371,12 @@ install_nvm() {
 
   if [[ "$DRY_RUN" == "1" ]]; then
     run mkdir -p "$NVM_DIR"
-    run bash -c "curl --retry 3 --retry-delay 1 --retry-all-errors -fsSL '$nvm_url' | tar -xz -C '$NVM_DIR' --strip-components=1"
+    run bash -c "curl --retry 3 --retry-delay 1 -fsSL '$nvm_url' | tar -xz -C '$NVM_DIR' --strip-components=1"
     return 0
   fi
 
   mkdir -p "$NVM_DIR"
-  if ! curl --retry 3 --retry-delay 1 --retry-all-errors -fsSL "$nvm_url" | tar -xz -C "$NVM_DIR" --strip-components=1; then
+  if ! curl --retry 3 --retry-delay 1 -fsSL "$nvm_url" | tar -xz -C "$NVM_DIR" --strip-components=1; then
     fail "Failed to install NVM from $nvm_url"
   fi
 
@@ -452,6 +452,14 @@ backup_file() {
   log_ok "Backup created: $backup"
 }
 
+preserve_config_tail() {
+  [[ -f "$CONFIG_FILE" ]] || return 0
+  awk '
+    /^\[marketplaces/ || /^\[plugins/ { preserve = 1 }
+    preserve { print }
+  ' "$CONFIG_FILE"
+}
+
 write_private_env() {
   [[ -n "$API_KEY" ]] || fail "Missing CODEX_TOKEN or OPENAI_API_KEY"
   log_step "4/7" "Write private API key"
@@ -489,8 +497,12 @@ write_config() {
     return 0
   fi
 
+  local tmp_config preserve_tail
+  tmp_config="$(mktemp)"
+  preserve_tail="$(preserve_config_tail)"
+
   if [[ "$SECURITY_PROFILE" == "max" ]]; then
-    cat > "$CONFIG_FILE" <<TOML
+    cat > "$tmp_config" <<TOML
 # Managed by agent-bootstrap.
 # This intentionally uses a custom provider, matching the simple gateway-oriented Codex setup.
 model = "$model_escaped"
@@ -520,7 +532,7 @@ stream_max_retries = $STREAM_MAX_RETRIES
 stream_idle_timeout_ms = $STREAM_IDLE_TIMEOUT_MS
 TOML
   else
-    cat > "$CONFIG_FILE" <<TOML
+    cat > "$tmp_config" <<TOML
 # Managed by agent-bootstrap.
 # Safe profile: leaves high-permission controls at Codex defaults.
 model = "$model_escaped"
@@ -548,6 +560,12 @@ stream_max_retries = $STREAM_MAX_RETRIES
 stream_idle_timeout_ms = $STREAM_IDLE_TIMEOUT_MS
 TOML
   fi
+
+  if [[ -n "$preserve_tail" ]]; then
+    printf "\n%s" "$preserve_tail" >> "$tmp_config"
+  fi
+
+  mv "$tmp_config" "$CONFIG_FILE"
 }
 
 sync_provider_history() {

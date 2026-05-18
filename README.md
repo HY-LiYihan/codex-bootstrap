@@ -27,7 +27,7 @@ Recommended stable Codex-only install:
 CODEX_TOKEN="YOUR_TOKEN" CODEX_API_URL="YOUR_BASE_URL" bash -c "$(curl -fsSL https://raw.githubusercontent.com/HY-LiYihan/agent-bootstrap/stable/install-codex.sh)"
 ```
 
-This path intentionally does one thing: install or verify Codex CLI, write a `custom` provider config, store the token in `~/.codex/private.env`, and sync older Codex session metadata to the active provider name. On a fresh machine, the installer first tries Bun, falls back to npm, and can install Node.js through NVM when npm is missing.
+This path intentionally does one thing: install or verify Codex CLI, write a `custom` provider config, store the token in `~/.codex/private.env`, and sync older Codex session metadata to the active provider name. On a fresh machine, the installer first tries Bun, falls back to npm, and can install Node.js through NVM when npm is missing. Existing marketplace and plugin blocks in `~/.codex/config.toml` are preserved by default.
 
 There are also three broader entry styles:
 
