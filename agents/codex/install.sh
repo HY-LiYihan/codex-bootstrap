@@ -311,21 +311,26 @@ download_source() {
     return 0
   fi
 
-  local tmp_dir
+  local tmp_dir archive
   tmp_dir="$(mktemp -d)"
-  local url="https://github.com/${BOOTSTRAP_REPO}/archive/${BOOTSTRAP_REF}.tar.gz"
+  archive="$tmp_dir/bootstrap.tar.gz"
+  local url="https://codeload.github.com/${BOOTSTRAP_REPO}/tar.gz/refs/heads/${BOOTSTRAP_REF}"
   log_info "Downloading bootstrap assets from $BOOTSTRAP_REPO@$BOOTSTRAP_REF" >&2
   if command_exists curl; then
-    if ! curl --retry 3 --retry-delay 1 -fsSL "$url" | tar -xz -C "$tmp_dir" --strip-components=1; then
+    if ! curl --retry 3 --retry-delay 1 -fsSL "$url" -o "$archive"; then
       fail "Failed to download bootstrap assets from $BOOTSTRAP_REPO@$BOOTSTRAP_REF"
     fi
   elif command_exists wget; then
-    if ! wget -qO- "$url" | tar -xz -C "$tmp_dir" --strip-components=1; then
+    if ! wget -qO "$archive" "$url"; then
       fail "Failed to download bootstrap assets from $BOOTSTRAP_REPO@$BOOTSTRAP_REF"
     fi
   else
     fail "curl or wget is required"
   fi
+  if ! tar -tzf "$archive" >/dev/null 2>&1; then
+    fail "Downloaded archive is not a valid gzip tarball from $BOOTSTRAP_REPO@$BOOTSTRAP_REF"
+  fi
+  tar -xzf "$archive" -C "$tmp_dir" --strip-components=1
   printf "%s" "$tmp_dir"
 }
 
